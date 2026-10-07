@@ -4,6 +4,165 @@ import { useAuth } from '../context/AuthContext'
 import { dataService } from '../services/dataService'
 import { categories } from '../data/mockCampaigns'
 import { money } from '../components/CampaignCard'
+import { prepareCampaignCover } from '../utils/coverImage'
 
-const initial={title:'',category:'Solidariedade',cause:'',city:'Campo Grande',state:'MS',description:'',quantity:200,price:10,drawType:'date',drawDate:'',drawRule:'',pixKey:'',pixHolder:'',customText:'',emoji:'🎁',accent:'#0f766e'}
-export default function Create(){const {user}=useAuth(),nav=useNavigate();const [form,setForm]=useState(initial),[prizes,setPrizes]=useState(['']),[step,setStep]=useState(1),[error,setError]=useState('');if(!user)return <main className="shell page"><div className="empty"><b>🔒</b><h1>Entre para criar uma campanha</h1><p>Sua conta reúne campanhas e participações.</p><Link className="btn primary" to="/entrar">Entrar ou cadastrar</Link></div></main>;const u=(k,v)=>setForm(f=>({...f,[k]:v}));const next=()=>{setError('');if(step===1&&(!form.title||!form.cause||!form.description))return setError('Preencha título, causa e descrição.');if(step===2&&(!form.quantity||!form.price||!prizes.filter(Boolean).length))return setError('Informe pelo menos um prêmio, quantidade e valor.');if(step===3&&!form.drawRule)return setError('Descreva a regra do sorteio.');setStep(s=>Math.min(4,s+1))};const publish=async()=>{if(!form.pixKey||!form.pixHolder)return setError('Informe a chave Pix e o titular.');const item=await dataService.createCampaign({...form,quantity:Number(form.quantity),price:Number(form.price),prizes:prizes.filter(Boolean)},user);nav(`/campanha/${item.slug}`)};return <main className="create"><div className="shell"><div className="createHead"><div><span className="eyebrow">NOVA CAMPANHA</span><h1>Crie sua Ajuda Premiada</h1><p>Organize as informações antes de divulgar.</p></div><div className="stepper">{[1,2,3,4].map(n=><i key={n} className={n<=step?'active':''}>{n}</i>)}</div></div><div className="createGrid"><section className="formcard">{step===1&&<><h2>01. Campanha e causa</h2><label>Título<input value={form.title} onChange={e=>u('title',e.target.value)} placeholder="Ex.: Ajude nosso projeto e concorra..."/></label><div className="row"><label>Categoria<select value={form.category} onChange={e=>u('category',e.target.value)}>{categories.filter(x=>x!=='Todas').map(x=><option key={x}>{x}</option>)}</select></label><label>Cidade<input value={form.city} onChange={e=>u('city',e.target.value)}/></label></div><label>Causa/objetivo<input value={form.cause} onChange={e=>u('cause',e.target.value)} placeholder="Para que será utilizada a arrecadação?"/></label><label>Descrição<textarea rows="5" value={form.description} onChange={e=>u('description',e.target.value)}/></label></>}{step===2&&<><h2>02. Prêmios e números</h2><label>Prêmios</label>{prizes.map((p,i)=><div className="prizeRow" key={i}><input value={p} onChange={e=>setPrizes(ps=>ps.map((x,j)=>j===i?e.target.value:x))} placeholder={`${i+1}º prêmio`}/>{prizes.length>1&&<button onClick={()=>setPrizes(ps=>ps.filter((_,j)=>j!==i))}>×</button>}</div>)}<button className="smallBtn" onClick={()=>setPrizes([...prizes,''])}>+ Adicionar outro prêmio</button><div className="row"><label>Quantidade de números<input type="number" min="10" max="5000" value={form.quantity} onChange={e=>u('quantity',e.target.value)}/></label><label>Valor por número<input type="number" min="1" step="0.5" value={form.price} onChange={e=>u('price',e.target.value)}/></label></div><div className="projection"><small>Potencial bruto se 100% preenchida</small><b>{money(Number(form.quantity)*Number(form.price))}</b></div></>}{step===3&&<><h2>03. Regra do sorteio</h2><div className="choice"><button className={form.drawType==='date'?'active':''} onClick={()=>u('drawType','date')}>📅 Em uma data</button><button className={form.drawType==='soldout'?'active':''} onClick={()=>u('drawType','soldout')}>✓ Ao preencher 100%</button></div>{form.drawType==='date'&&<label>Data prevista<input type="date" value={form.drawDate} onChange={e=>u('drawDate',e.target.value)}/></label>}<label>Regra<textarea rows="6" value={form.drawRule} onChange={e=>u('drawRule',e.target.value)} placeholder="Explique o critério, transmissão, prazo e forma de divulgação do resultado."/></label></>}{step===4&&<><h2>04. Pix e mensagem</h2><label>Chave Pix<input value={form.pixKey} onChange={e=>u('pixKey',e.target.value)} placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória"/></label><label>Titular da chave<input value={form.pixHolder} onChange={e=>u('pixHolder',e.target.value)}/></label><label>Mensagem personalizada<textarea rows="4" value={form.customText} onChange={e=>u('customText',e.target.value)} placeholder="Agradecimento, orientação ou chamada para compartilhar."/></label><div className="notice"><b>⚠ Antes de publicar</b><p>O organizador responde pela veracidade das informações, prêmio, recebimento do Pix, regras, autorizações aplicáveis e realização/divulgação do resultado.</p></div></>}{error&&<div className="error">{error}</div>}<div className="actions">{step>1&&<button className="btn ghost" onClick={()=>{setError('');setStep(step-1)}}>Voltar</button>}<button className="btn primary" onClick={step===4?publish:next}>{step===4?'Publicar campanha':'Continuar'}</button></div></section><aside className="preview"><span className="eyebrow">PRÉVIA</span><div className="previewCover" style={{'--accent':form.accent}}>{form.emoji}</div><small>{form.category} • {form.city}/{form.state}</small><h3>{form.title||'Título da sua campanha'}</h3><p>{prizes.filter(Boolean)[0]||'Seu prêmio aparecerá aqui'}</p><b>{money(form.price)} <small>/ número</small></b><div className="progress"><i style={{width:'18%'}}/></div><small>{form.quantity} números no lançamento</small></aside></div></div></main>}
+const initial = {
+  title: '',
+  category: 'Solidariedade',
+  cause: '',
+  city: 'Campo Grande',
+  state: 'MS',
+  description: '',
+  quantity: 200,
+  price: 10,
+  drawType: 'date',
+  drawDate: '',
+  drawRule: '',
+  pixKey: '',
+  pixHolder: '',
+  customText: '',
+  emoji: '🎁',
+  accent: '#0f766e',
+  coverImage: '',
+  coverImageName: '',
+}
+
+export default function Create() {
+  const { user } = useAuth()
+  const nav = useNavigate()
+  const [form, setForm] = useState(initial)
+  const [prizes, setPrizes] = useState([''])
+  const [step, setStep] = useState(1)
+  const [error, setError] = useState('')
+  const [imageError, setImageError] = useState('')
+  const [processingImage, setProcessingImage] = useState(false)
+
+  if (!user) {
+    return <main className="shell page"><div className="empty"><b>🔒</b><h1>Entre para criar uma campanha</h1><p>Sua conta reúne campanhas e participações.</p><Link className="btn primary" to="/entrar">Entrar ou cadastrar</Link></div></main>
+  }
+
+  const u = (key, value) => setForm(current => ({ ...current, [key]: value }))
+
+  const handleCover = async event => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    setImageError('')
+    setProcessingImage(true)
+    try {
+      const prepared = await prepareCampaignCover(file)
+      setForm(current => ({
+        ...current,
+        coverImage: prepared.dataUrl,
+        coverImageName: prepared.originalName,
+      }))
+    } catch (err) {
+      setImageError(err.message || 'Não foi possível preparar a imagem.')
+    } finally {
+      setProcessingImage(false)
+    }
+  }
+
+  const removeCover = () => {
+    setImageError('')
+    setForm(current => ({ ...current, coverImage: '', coverImageName: '' }))
+  }
+
+  const next = () => {
+    setError('')
+    if (step === 1 && (!form.title || !form.cause || !form.description)) return setError('Preencha título, causa e descrição.')
+    if (step === 2 && (!form.quantity || !form.price || !prizes.filter(Boolean).length)) return setError('Informe pelo menos um prêmio, quantidade e valor.')
+    if (step === 3 && !form.drawRule) return setError('Descreva a regra do sorteio.')
+    setStep(current => Math.min(4, current + 1))
+  }
+
+  const publish = async () => {
+    if (!form.pixKey || !form.pixHolder) return setError('Informe a chave Pix e o titular.')
+    const item = await dataService.createCampaign({
+      ...form,
+      quantity: Number(form.quantity),
+      price: Number(form.price),
+      prizes: prizes.filter(Boolean),
+    }, user)
+    nav(`/campanha/${item.slug}`)
+  }
+
+  return <main className="create"><div className="shell">
+    <div className="createHead">
+      <div><span className="eyebrow">NOVA CAMPANHA</span><h1>Crie sua Ajuda Premiada</h1><p>Organize as informações antes de divulgar.</p></div>
+      <div className="stepper">{[1, 2, 3, 4].map(n => <i key={n} className={n <= step ? 'active' : ''}>{n}</i>)}</div>
+    </div>
+
+    <div className="createGrid">
+      <section className="formcard">
+        {step === 1 && <>
+          <h2>01. Campanha e causa</h2>
+          <label>Título<input value={form.title} onChange={e => u('title', e.target.value)} placeholder="Ex.: Ajude nosso projeto e concorra..." /></label>
+          <div className="row">
+            <label>Categoria<select value={form.category} onChange={e => u('category', e.target.value)}>{categories.filter(x => x !== 'Todas').map(x => <option key={x}>{x}</option>)}</select></label>
+            <label>Cidade<input value={form.city} onChange={e => u('city', e.target.value)} /></label>
+          </div>
+          <label>Causa/objetivo<input value={form.cause} onChange={e => u('cause', e.target.value)} placeholder="Para que será utilizada a arrecadação?" /></label>
+          <label>Descrição<textarea rows="5" value={form.description} onChange={e => u('description', e.target.value)} /></label>
+
+          <div className="coverField">
+            <span>Imagem principal da campanha</span>
+            <label className={`coverUpload ${form.coverImage ? 'hasImage' : ''}`}>
+              <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleCover} />
+              {form.coverImage
+                ? <img src={form.coverImage} alt="Prévia da imagem principal" />
+                : <div className="coverUploadEmpty"><div><div className="coverUploadIcon">🖼️</div><b>{processingImage ? 'Preparando imagem...' : 'Toque para escolher a imagem principal'}</b><small>JPG, PNG ou WEBP • até 12 MB</small></div></div>}
+            </label>
+            <div className="coverHelp">
+              <span>Ela será recortada automaticamente em 1200 × 630 px e usada como capa da campanha.</span>
+              {form.coverImage && <button type="button" onClick={removeCover}>Remover imagem</button>}
+            </div>
+            {imageError && <div className="imageError">{imageError}</div>}
+            <div className="coverSocialHint"><b>Miniatura de compartilhamento:</b> esta é a imagem preparada para aparecer quando o link da campanha for compartilhado no WhatsApp e nas redes sociais. Quando o Supabase for conectado, ela será publicada no Storage e vinculada aos metadados sociais da campanha.</div>
+          </div>
+        </>}
+
+        {step === 2 && <>
+          <h2>02. Prêmios e números</h2>
+          <label>Prêmios</label>
+          {prizes.map((prize, i) => <div className="prizeRow" key={i}><input value={prize} onChange={e => setPrizes(items => items.map((x, j) => j === i ? e.target.value : x))} placeholder={`${i + 1}º prêmio`} />{prizes.length > 1 && <button onClick={() => setPrizes(items => items.filter((_, j) => j !== i))}>×</button>}</div>)}
+          <button className="smallBtn" onClick={() => setPrizes([...prizes, ''])}>+ Adicionar outro prêmio</button>
+          <div className="row">
+            <label>Quantidade de números<input type="number" min="10" max="5000" value={form.quantity} onChange={e => u('quantity', e.target.value)} /></label>
+            <label>Valor por número<input type="number" min="1" step="0.5" value={form.price} onChange={e => u('price', e.target.value)} /></label>
+          </div>
+          <div className="projection"><small>Potencial bruto se 100% preenchida</small><b>{money(Number(form.quantity) * Number(form.price))}</b></div>
+        </>}
+
+        {step === 3 && <>
+          <h2>03. Regra do sorteio</h2>
+          <div className="choice"><button className={form.drawType === 'date' ? 'active' : ''} onClick={() => u('drawType', 'date')}>📅 Em uma data</button><button className={form.drawType === 'soldout' ? 'active' : ''} onClick={() => u('drawType', 'soldout')}>✓ Ao preencher 100%</button></div>
+          {form.drawType === 'date' && <label>Data prevista<input type="date" value={form.drawDate} onChange={e => u('drawDate', e.target.value)} /></label>}
+          <label>Regra<textarea rows="6" value={form.drawRule} onChange={e => u('drawRule', e.target.value)} placeholder="Explique o critério, transmissão, prazo e forma de divulgação do resultado." /></label>
+        </>}
+
+        {step === 4 && <>
+          <h2>04. Pix e mensagem</h2>
+          <label>Chave Pix<input value={form.pixKey} onChange={e => u('pixKey', e.target.value)} placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória" /></label>
+          <label>Titular da chave<input value={form.pixHolder} onChange={e => u('pixHolder', e.target.value)} /></label>
+          <label>Mensagem personalizada<textarea rows="4" value={form.customText} onChange={e => u('customText', e.target.value)} placeholder="Agradecimento, orientação ou chamada para compartilhar." /></label>
+          <div className="notice"><b>⚠ Antes de publicar</b><p>O organizador responde pela veracidade das informações, prêmio, recebimento do Pix, regras, autorizações aplicáveis e realização/divulgação do resultado.</p></div>
+        </>}
+
+        {error && <div className="error">{error}</div>}
+        <div className="actions">{step > 1 && <button className="btn ghost" onClick={() => { setError(''); setStep(step - 1) }}>Voltar</button>}<button className="btn primary" onClick={step === 4 ? publish : next}>{step === 4 ? 'Publicar campanha' : 'Continuar'}</button></div>
+      </section>
+
+      <aside className="preview">
+        <span className="eyebrow">PRÉVIA</span>
+        <div className={`previewCover ${form.coverImage ? 'withImage' : ''}`} style={{ '--accent': form.accent }}>{form.coverImage ? <img src={form.coverImage} alt="Capa da campanha" /> : form.emoji}</div>
+        <small>{form.category} • {form.city}/{form.state}</small>
+        <h3>{form.title || 'Título da sua campanha'}</h3>
+        <p>{prizes.filter(Boolean)[0] || 'Seu prêmio aparecerá aqui'}</p>
+        <b>{money(form.price)} <small>/ número</small></b>
+        <div className="progress"><i style={{ width: '18%' }} /></div>
+        <small>{form.quantity} números no lançamento</small>
+      </aside>
+    </div>
+  </div></main>
+}
