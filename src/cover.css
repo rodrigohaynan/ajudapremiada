@@ -1,0 +1,24 @@
+.cover.withImage,.detailCover.withImage,.previewCover.withImage{background:#eef3f1;overflow:hidden}
+.cover.withImage>img,.detailCover.withImage>img,.previewCover.withImage>img{width:100%;height:100%;display:block;object-fit:cover}
+.cover.withImage>img,.detailCover.withImage>img{position:absolute;inset:0}
+.cover.withImage .badges,.detailCover.withImage .badges{z-index:2}
+.detailCover.withImage{display:block}
+
+.coverField{display:flex;flex-direction:column;gap:7px}
+.coverField>span{font-size:10px;font-weight:700}
+.coverUpload{position:relative;display:block;border:1.5px dashed #b7cac5;border-radius:13px;overflow:hidden;background:#f8fbfa;cursor:pointer;min-height:190px}
+.coverUpload:hover{border-color:var(--green);background:#f1f9f7}
+.coverUpload input{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
+.coverUpload.hasImage{border-style:solid;background:#eef3f1}
+.coverUpload img{width:100%;aspect-ratio:1200/630;object-fit:cover;display:block}
+.coverUploadEmpty{min-height:190px;display:grid;place-items:center;text-align:center;padding:24px;color:#6f7c79}
+.coverUploadEmpty b{display:block;color:var(--green);font-size:13px;margin:8px 0 5px}
+.coverUploadEmpty small{display:block;font-size:9px;line-height:1.5}
+.coverUploadIcon{width:46px;height:46px;border-radius:13px;background:var(--mint);display:grid;place-items:center;font-size:22px;margin:auto}
+.coverHelp{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;font-size:9px;color:#7c8986;line-height:1.45}
+.coverHelp button{border:0;background:none;color:#a44747;font-size:9px;font-weight:700;padding:0;cursor:pointer;white-space:nowrap}
+.coverSocialHint{background:#f1f8f6;border:1px solid #d9ebe7;border-radius:10px;padding:10px 12px;font-size:9px;color:#62706d;line-height:1.55}
+.coverSocialHint b{color:var(--green)}
+.imageError{background:#ffeded;color:#9c3838;padding:9px 10px;border-radius:9px;font-size:9px}
+
+@media(max-width:700px){.coverUpload,.coverUploadEmpty{min-height:150px}.coverHelp{flex-direction:column}.coverHelp button{align-self:flex-start}}
