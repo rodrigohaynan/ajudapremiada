@@ -89,7 +89,7 @@ export default function Create() {
 
   return <main className="create"><div className="shell">
     <div className="createHead">
-      <div><span className="eyebrow">NOVA CAMPANHA</span><h1>Crie sua Ajuda Premiada</h1><p>Organize as informações antes de divulgar.</p></div>
+      <div><span className="eyebrow">NOVA CAMPANHA</span><h1>Crie sua campanha no Ajude e Ganhe</h1><p>Organize as informações antes de divulgar.</p></div>
       <div className="stepper">{[1, 2, 3, 4].map(n => <i key={n} className={n <= step ? 'active' : ''}>{n}</i>)}</div>
     </div>
 
