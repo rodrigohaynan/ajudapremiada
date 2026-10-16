@@ -1,6 +1,6 @@
-# Ajuda Premiada
+# Ajude e Ganhe
 
-MVP front-end para criação, descoberta e acompanhamento de campanhas de “ajuda premiada”.
+MVP front-end para criação, descoberta e acompanhamento de campanhas com causas, números e prêmios.
 
 ## O que já existe
 
