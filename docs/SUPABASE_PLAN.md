@@ -1,4 +1,4 @@
-# Plano Supabase — Ajuda Premiada
+# Plano Supabase — Ajude e Ganhe
 
 A migração deve preservar a interface de `src/services/dataService.js`.
 
