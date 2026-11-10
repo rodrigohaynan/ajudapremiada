@@ -36,6 +36,7 @@ export default function Create() {
   const [error, setError] = useState('')
   const [imageError, setImageError] = useState('')
   const [processingImage, setProcessingImage] = useState(false)
+  const [publishing, setPublishing] = useState(false)
 
   if (!user) {
     return <main className="shell page"><div className="empty"><b>🔒</b><h1>Entre para criar uma campanha</h1><p>Sua conta reúne campanhas e participações.</p><Link className="btn primary" to="/entrar">Entrar ou cadastrar</Link></div></main>
@@ -78,13 +79,21 @@ export default function Create() {
 
   const publish = async () => {
     if (!form.pixKey || !form.pixHolder) return setError('Informe a chave Pix e o titular.')
-    const item = await dataService.createCampaign({
-      ...form,
-      quantity: Number(form.quantity),
-      price: Number(form.price),
-      prizes: prizes.filter(Boolean),
-    }, user)
-    nav(`/campanha/${item.slug}`)
+    setError('')
+    setPublishing(true)
+    try {
+      const item = await dataService.createCampaign({
+        ...form,
+        quantity: Number(form.quantity),
+        price: Number(form.price),
+        prizes: prizes.filter(Boolean),
+      }, user)
+      nav(`/campanha/${item.slug}`)
+    } catch (err) {
+      setError(err.message || 'Não foi possível publicar a campanha.')
+    } finally {
+      setPublishing(false)
+    }
   }
 
   return <main className="create"><div className="shell">
@@ -118,7 +127,7 @@ export default function Create() {
               {form.coverImage && <button type="button" onClick={removeCover}>Remover imagem</button>}
             </div>
             {imageError && <div className="imageError">{imageError}</div>}
-            <div className="coverSocialHint"><b>Miniatura de compartilhamento:</b> esta é a imagem preparada para aparecer quando o link da campanha for compartilhado no WhatsApp e nas redes sociais. Quando o Supabase for conectado, ela será publicada no Storage e vinculada aos metadados sociais da campanha.</div>
+            <div className="coverSocialHint"><b>Miniatura de compartilhamento:</b> esta é a imagem preparada para aparecer quando o link da campanha for compartilhado no WhatsApp e nas redes sociais. A imagem será enviada ao Storage do Supabase e ficará vinculada à campanha. A prévia do WhatsApp será ativada na etapa de metadados sociais.</div>
           </div>
         </>}
 
@@ -150,7 +159,7 @@ export default function Create() {
         </>}
 
         {error && <div className="error">{error}</div>}
-        <div className="actions">{step > 1 && <button className="btn ghost" onClick={() => { setError(''); setStep(step - 1) }}>Voltar</button>}<button className="btn primary" onClick={step === 4 ? publish : next}>{step === 4 ? 'Publicar campanha' : 'Continuar'}</button></div>
+        <div className="actions">{step > 1 && <button className="btn ghost" onClick={() => { setError(''); setStep(step - 1) }}>Voltar</button>}<button disabled={publishing} className="btn primary" onClick={step === 4 ? publish : next}>{step === 4 ? (publishing ? 'Publicando...' : 'Publicar campanha') : 'Continuar'}</button></div>
       </section>
 
       <aside className="preview">
