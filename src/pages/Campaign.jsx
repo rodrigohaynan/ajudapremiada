@@ -84,7 +84,7 @@ export default function Campaign() {
           <div className="total"><span>Total</span><b>{money(total)}</b></div>
           {error&&<div className="error">{error}</div>}
           <button disabled={busy} className="btn primary wide" onClick={reserve}>{user ? (busy?'Reservando...':'Reservar números') : 'Entrar para participar'}</button>
-          {payment && <div className="success">✓ Números reservados por 15 minutos.<br/>Faça o Pix de <b>{money(payment.amount)}</b> para <b>{payment.pixKey}</b> — {payment.pixHolder}.</div>}
+          {payment && <div className="success">✓ Números reservados por 5 minutos.<br/>Faça o Pix de <b>{money(payment.amount)}</b> para <b>{payment.pixKey}</b> — {payment.pixHolder}.</div>}
           {!payment && <div className="pix"><small>A chave Pix é exibida somente após a reserva dos números.</small><span>Isso protege os dados de pagamento do organizador.</span></div>}
         </div>
       </aside>
