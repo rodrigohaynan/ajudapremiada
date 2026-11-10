@@ -13,25 +13,27 @@ export default function Campaign() {
   const [c, setC] = useState(null)
   const [reserved, setReserved] = useState([])
   const [selected, setSelected] = useState([])
-  const [done, setDone] = useState(false)
+  const [payment, setPayment] = useState(null)
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     dataService.getCampaign(slug).then(item => {
       setC(item)
       if (item) dataService.listReservedNumbers(item.id).then(setReserved)
-    })
+    }).catch(err=>setError(err.message||'Não foi possível carregar a campanha.'))
   }, [slug])
 
   useEffect(() => {
     if (!c) return
     const previousTitle = document.title
-    document.title = `${c.title} | Ajuda Premiada`
+    document.title = `${c.title} | Ajude e Ganhe`
     return () => { document.title = previousTitle }
   }, [c])
 
   const total = useMemo(() => selected.length * (c?.price || 0), [selected, c])
 
-  if (!c) return <main className="shell page"><div className="empty"><b>…</b><h2>Carregando campanha</h2></div></main>
+  if (!c) return <main className="shell page"><div className="empty"><b>{error?'!':'…'}</b><h2>{error||'Carregando campanha'}</h2></div></main>
 
   const toggle = number => {
     if (reserved.includes(number)) return
@@ -39,15 +41,23 @@ export default function Campaign() {
   }
 
   const reserve = async () => {
-    if (!user) {
-      nav('/entrar')
-      return
-    }
-    if (!selected.length) return
-    await dataService.reserveNumbers({ campaignId: c.id, numbers: selected, user, amount: total })
-    setReserved([...reserved, ...selected])
-    setSelected([])
-    setDone(true)
+    if (!user) { nav('/entrar'); return }
+    if (!selected.length || busy) return
+    setError('')
+    setBusy(true)
+    const chosen=[...selected]
+    try{
+      const result=await dataService.reserveNumbers({ campaignId: c.id, numbers: chosen, user, amount: total })
+      setReserved(current=>[...new Set([...current,...chosen])])
+      setSelected([])
+      setPayment(result.payment ? {...result.payment,amount:result.amount,expiresAt:result.expiresAt} : null)
+    }catch(err){
+      const message=String(err.message||'')
+      if(message.includes('NUMBER_UNAVAILABLE')){
+        setError('Um ou mais números acabaram de ser escolhidos por outra pessoa. Atualize a seleção e tente novamente.')
+        dataService.listReservedNumbers(c.id).then(setReserved)
+      }else setError(message||'Não foi possível registrar a participação.')
+    }finally{setBusy(false)}
   }
 
   return <main className="shell detailPage">
@@ -70,11 +80,12 @@ export default function Campaign() {
           <span className="eyebrow">ESCOLHA SEUS NÚMEROS</span>
           <h2>{selected.length ? `${selected.length} selecionado(s)` : 'Toque nos números disponíveis'}</h2>
           <div className="numberGrid">{Array.from({ length: c.quantity }, (_, i) => i + 1).map(number => <button key={number} disabled={reserved.includes(number)} onClick={() => toggle(number)} className={selected.includes(number) ? 'sel' : ''}>{String(number).padStart(3, '0')}</button>)}</div>
-          <div className="legend"><span>□ Disponível</span><span>■ Selecionado</span><span>▨ Preenchido</span></div>
+          <div className="legend"><span>□ Disponível</span><span>■ Selecionado</span><span>▨ Reservado</span></div>
           <div className="total"><span>Total</span><b>{money(total)}</b></div>
-          <button className="btn primary wide" onClick={reserve}>{user ? 'Registrar participação' : 'Entrar para participar'}</button>
-          {done && <div className="success">✓ Participação registrada. Faça o Pix para <b>{c.pixKey}</b> — {c.pixHolder}.</div>}
-          <div className="pix"><small>Pix informado pelo organizador</small><b>{c.pixKey}</b><span>{c.pixHolder}</span></div>
+          {error&&<div className="error">{error}</div>}
+          <button disabled={busy} className="btn primary wide" onClick={reserve}>{user ? (busy?'Reservando...':'Reservar números') : 'Entrar para participar'}</button>
+          {payment && <div className="success">✓ Números reservados por 15 minutos.<br/>Faça o Pix de <b>{money(payment.amount)}</b> para <b>{payment.pixKey}</b> — {payment.pixHolder}.</div>}
+          {!payment && <div className="pix"><small>A chave Pix é exibida somente após a reserva dos números.</small><span>Isso protege os dados de pagamento do organizador.</span></div>}
         </div>
       </aside>
     </div>
