@@ -40,7 +40,15 @@ export function AuthProvider({children}){
 
  const register=async({name,email,password})=>{
    if(!supabase) throw new Error('Supabase não está configurado.')
-   const {data,error}=await supabase.auth.signUp({email,password,options:{data:{full_name:name}}})
+   const emailRedirectTo='https://ajude-e-ganhe.netlify.app/painel'
+   const {data,error}=await supabase.auth.signUp({
+     email,
+     password,
+     options:{
+       data:{full_name:name},
+       emailRedirectTo
+     }
+   })
    if(error) throw error
    const u=data.session?await shapeUser(data.user):null
    if(u)setUser(u)
