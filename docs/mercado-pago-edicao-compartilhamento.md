@@ -10,7 +10,7 @@ A interface **Minha conta → Minhas campanhas → Conectar Mercado Pago** usa o
 Configure as seguintes **secrets de Edge Functions no Supabase** (nunca no Vite ou no GitHub):
 - `MP_CLIENT_ID`: ID da aplicação Mercado Pago no modelo Marketplace.
 - `MP_CLIENT_SECRET`: segredo da mesma aplicação.
-- `MP_REDIRECT_URI`: `https://bejboiqybndhgutbadde.supabase.co/functions/v1/mercado-pago-oauth?flow=callback`
+- `MP_REDIRECT_URI`: `https://bejboiqybndhgutbadde.supabase.co/functions/v1/mercado-pago-oauth`
 
 Cadastre essa mesma URL, **idêntica**, como URI de redirecionamento na aplicação do Mercado Pago.
 
