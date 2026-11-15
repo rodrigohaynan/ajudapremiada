@@ -2,7 +2,7 @@ const TARGET_WIDTH = 1200
 const TARGET_HEIGHT = 630
 const MAX_FILE_SIZE = 12 * 1024 * 1024
 
-export async function prepareCampaignCover(file) {
+export async function prepareCampaignCover(file, { mode = 'contain' } = {}) {
   if (!file) return null
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
     throw new Error('Use uma imagem JPG, PNG ou WEBP.')
@@ -19,6 +19,20 @@ export async function prepareCampaignCover(file) {
 
   ctx.fillStyle = '#f7faf9'
   ctx.fillRect(0, 0, TARGET_WIDTH, TARGET_HEIGHT)
+
+  // O modo "contain" preserva o objeto inteiro e preenche as laterais.
+  if (mode === 'contain') {
+    const scale = Math.min(TARGET_WIDTH / source.width, TARGET_HEIGHT / source.height)
+    const width = Math.round(source.width * scale)
+    const height = Math.round(source.height * scale)
+    ctx.drawImage(source, Math.round((TARGET_WIDTH - width) / 2), Math.round((TARGET_HEIGHT - height) / 2), width, height)
+    return {
+      dataUrl: canvas.toDataURL('image/jpeg', 0.85),
+      originalName: file.name,
+      width: TARGET_WIDTH,
+      height: TARGET_HEIGHT,
+    }
+  }
 
   const sourceRatio = source.width / source.height
   const targetRatio = TARGET_WIDTH / TARGET_HEIGHT
