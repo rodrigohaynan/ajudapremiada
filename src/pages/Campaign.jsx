@@ -16,6 +16,7 @@ export default function Campaign() {
   const [payment, setPayment] = useState(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [shareStatus, setShareStatus] = useState('')
 
   useEffect(() => {
     dataService.getCampaign(slug).then(item => {
@@ -38,6 +39,22 @@ export default function Campaign() {
   const toggle = number => {
     if (reserved.includes(number)) return
     setSelected(current => current.includes(number) ? current.filter(x => x !== number) : [...current, number])
+  }
+
+  const shareCampaign = async () => {
+    const url = window.location.origin + '/campanha/' + encodeURIComponent(c.slug) +
+      '?v=' + encodeURIComponent(c.updatedAt || c.createdAt || '')
+    const shareData = { title: c.title, text: c.cause || c.description, url }
+    setShareStatus('')
+    try {
+      if (navigator.share) await navigator.share(shareData)
+      else {
+        await navigator.clipboard.writeText(url)
+        setShareStatus('Link copiado! Ao enviar no WhatsApp, a miniatura será carregada a partir da capa da campanha.')
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') setShareStatus('Não foi possível compartilhar. Copie o endereço do navegador.')
+    }
   }
 
   const reserve = async () => {
@@ -68,7 +85,13 @@ export default function Campaign() {
           {c.coverImage ? <img src={c.coverImage} alt={`Imagem principal de ${c.title}`} /> : (c.emoji || '🎁')}
           <div className="badges"><i>{c.category}</i>{c.verified && <i>✓ Verificada</i>}</div>
         </div>
-        <div className="detailTitle"><small>📍 {c.city}/{c.state} • por {c.organizer}</small><h1>{c.title}</h1><p>{c.description}</p></div>
+        <div className="detailTitle"><small>📍 {c.city}/{c.state} • por {c.organizer}</small><h1>{c.title}</h1><p>{c.description}</p>
+          <div className="shareActions">
+            <button className="btn primary" type="button" onClick={shareCampaign}>↗ Compartilhar campanha</button>
+            {user?.id === c.ownerId && <Link className="btn ghost" to={'/campanha/' + c.slug + '/editar'}>✎ Editar campanha</Link>}
+          </div>
+          {shareStatus && <p role="status">{shareStatus}</p>}
+        </div>
         <div className="infoCards"><article><small>Valor por número</small><b>{money(c.price)}</b></article><article><small>Quantidade</small><b>{c.quantity}</b></article><article><small>Sorteio</small><b>{c.drawType === 'date' ? dateBR(c.drawDate) : 'Ao preencher'}</b></article></div>
         <article className="box"><h2>🎁 {c.prizes?.length > 1 ? 'Prêmios' : 'Prêmio'}</h2><ul>{c.prizes?.map((prize, i) => <li key={`${prize}-${i}`}><b>{i + 1}º</b> {prize}</li>)}</ul></article>
         <article className="box"><h2>♥ Sobre a causa</h2><p><b>{c.cause}</b></p><p>{c.customText}</p></article>
