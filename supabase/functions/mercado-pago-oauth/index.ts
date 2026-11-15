@@ -7,7 +7,7 @@ const PROJECT_ORIGIN = "https://ajude-e-ganhe.netlify.app";
 const MP_CLIENT_ID = Deno.env.get("MP_CLIENT_ID") || "";
 const MP_CLIENT_SECRET = Deno.env.get("MP_CLIENT_SECRET") || "";
 const CALLBACK_URL = Deno.env.get("MP_REDIRECT_URI") ||
-  SUPABASE_URL + "/functions/v1/mercado-pago-oauth?flow=callback";
+  SUPABASE_URL + "/functions/v1/mercado-pago-oauth";
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: {
@@ -37,7 +37,7 @@ Deno.serve(async (req: Request) => {
   } });
   if (!SUPABASE_URL || !SERVICE_KEY) return json({error:"Configuração Supabase indisponível."},503);
   const url = new URL(req.url);
-  if (url.searchParams.get("flow") === "callback") {
+  if (req.method === "GET") {
     if (req.method !== "GET") return redirect("error");
     if (url.searchParams.has("error")) return redirect("cancelled");
     const code = url.searchParams.get("code");
