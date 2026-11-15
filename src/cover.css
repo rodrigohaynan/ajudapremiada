@@ -22,3 +22,23 @@
 .imageError{background:#ffeded;color:#9c3838;padding:9px 10px;border-radius:9px;font-size:9px}
 
 @media(max-width:700px){.coverUpload,.coverUploadEmpty{min-height:150px}.coverHelp{flex-direction:column}.coverHelp button{align-self:flex-start}}
+
+/* Enquadramento sem cortes para cards, prévia e página pública */
+.cover.withImage>img,.detailCover.withImage>img,.previewCover.withImage>img{object-fit:contain}
+.cover.withImage,.detailCover.withImage,.previewCover.withImage{background:#f7faf9}
+.coverFitActions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.coverFitActions button{background:#fff;border:1px solid #bed2cd;border-radius:8px;padding:8px 12px;font-size:11px;cursor:pointer}
+.coverFitActions button.active{border-color:var(--green);color:var(--green);background:#e9f7f3;font-weight:800}
+.ownedCard{min-width:0;display:flex;flex-direction:column}
+.ownedCard .card{flex:1}
+.ownedActions{padding:10px 0 0;display:flex;gap:8px;flex-wrap:wrap}
+.ownedActions .btn{font-size:12px;padding:10px 14px}
+.shareActions{display:flex;gap:10px;flex-wrap:wrap;margin-top:15px}
+.mpConnectBox{border:1px solid #d8e7e3;background:#f6faf9;border-radius:12px;padding:16px;margin:16px 0}
+.mpConnectBox h3{font-size:15px;margin:0 0 7px}
+.mpConnectBox p{font-size:12px;color:#667773;line-height:1.5;margin:8px 0}
+.mpConnectBox .btn{font-size:12px}
+.mpConnectBox .error{margin:10px 0}
+.mpConnectBox .success{margin:10px 0}
+.mpConnectBox strong{overflow-wrap:anywhere}
+.editWarning{font-size:12px;color:#667773;background:#f2f7f6;border-radius:10px;padding:12px;margin:12px 0}
