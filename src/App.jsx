@@ -16,6 +16,7 @@ export default function App(){
       <Route path="/explorar" element={<Explore/>}/>
       <Route path="/campanha/:slug" element={<Campaign/>}/>
       <Route path="/criar" element={<Create/>}/>
+      <Route path="/campanha/:slug/editar" element={<Create/>}/>
       <Route path="/painel" element={<Dashboard/>}/>
       <Route path="/como-funciona" element={<How/>}/>
       <Route path="*" element={<main className="shell page"><div className="empty"><b>404</b><h1>Página não encontrada</h1></div></main>}/>
