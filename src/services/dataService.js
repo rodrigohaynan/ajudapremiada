@@ -10,6 +10,15 @@ const localService={
  async getCampaign(value){return (await this.listCampaigns()).find(c=>c.id===value||c.slug===value)||null},
  async createCampaign(payload,user){const all=await this.listCampaigns();const stamp=Date.now();const slug=(payload.title||'campanha').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'')+'-'+String(stamp).slice(-4);const item={...payload,id:`c-${stamp}`,slug,ownerId:user.id,organizer:user.name,verified:false,sold:0,createdAt:new Date().toISOString()};write(K.campaigns,[item,...all]);return item},
  async reserveNumbers({campaignId,numbers,user,amount}){const all=read(K.parts,[]);const item={id:`p-${Date.now()}`,campaignId,numbers,userId:user.id,userName:user.name,amount,status:'aguardando-pagamento',createdAt:new Date().toISOString(),payment:null};write(K.parts,[item,...all]);return item},
+ async getPaymentSettings(){return {pixKey:'',pixHolder:''}},
+ async updateCampaign(id,payload,user){
+  const all=await this.listCampaigns()
+  const old=all.find(c=>c.id===id&&c.ownerId===user.id)
+  if(!old)throw new Error('Somente o organizador pode editar esta campanha.')
+  const item={...old,...payload,id,ownerId:user.id,quantity:old.quantity,price:old.price,updatedAt:new Date().toISOString()}
+  write(K.campaigns,all.map(c=>c.id===id?item:c))
+  return item
+ },
  async listParticipations(userId){return read(K.parts,[]).filter(p=>p.userId===userId)},
  async listOwnedCampaigns(userId){return (await this.listCampaigns()).filter(c=>c.ownerId===userId)},
  async listReservedNumbers(campaignId){return read(K.parts,[]).filter(p=>p.campaignId===campaignId).flatMap(p=>p.numbers)}
@@ -49,6 +58,7 @@ const toCampaign = row => ({
   coverImage: row.cover_url,
   status: row.status,
   createdAt: row.created_at,
+  updatedAt: row.updated_at,
 })
 
 async function paidCount(campaignId){
@@ -126,6 +136,39 @@ const supabaseService={
     if(uploadedPath) await supabase.storage.from('campaign-covers').remove([uploadedPath])
     throw error
   }
+ },
+ async getPaymentSettings(campaignId){
+  const {data,error}=await supabase.from('campaign_payment_settings')
+    .select('pix_key,pix_holder').eq('campaign_id',campaignId).maybeSingle()
+  if(error)throw error
+  return {pixKey:data?.pix_key||'',pixHolder:data?.pix_holder||''}
+ },
+ async updateCampaign(id,payload,user){
+  const existing=await this.getCampaign(id)
+  if(!existing||existing.ownerId!==user.id)throw new Error('Somente o organizador pode editar esta campanha.')
+  let coverUrl=payload.coverImage||null
+  if(coverUrl?.startsWith('data:image/')) coverUrl=await uploadCover(coverUrl,user.id)
+  const {data,error}=await supabase.from('campaigns').update({
+    title:payload.title,category:payload.category,cause:payload.cause,city:payload.city,
+    state:payload.state,description:payload.description,
+    draw_type:payload.drawType,draw_date:payload.drawType==='date'&&payload.drawDate?payload.drawDate:null,
+    draw_rule:payload.drawRule,custom_text:payload.customText||null,cover_url:coverUrl,
+    updated_at:new Date().toISOString()
+  }).eq('id',id).eq('owner_id',user.id).select('slug').single()
+  if(error)throw error
+  const updatedPay=await supabase.from('campaign_payment_settings').update({
+    pix_key:payload.pixKey,pix_holder:payload.pixHolder,updated_at:new Date().toISOString()
+  }).eq('campaign_id',id)
+  if(updatedPay.error)throw updatedPay.error
+  const newPrizes=(payload.prizes||[]).map(p=>String(p).trim()).filter(Boolean)
+  if(!newPrizes.length)throw new Error('Informe ao menos um prêmio.')
+  const removed=await supabase.from('campaign_prizes').delete().eq('campaign_id',id)
+  if(removed.error)throw removed.error
+  const added=await supabase.from('campaign_prizes').insert(newPrizes.map((title,index)=>({
+    campaign_id:id,position:index+1,title
+  })))
+  if(added.error)throw added.error
+  return this.getCampaign(data.slug)
  },
  async reserveNumbers({campaignId,numbers}){
   const {data,error}=await supabase.rpc('reserve_campaign_numbers',{p_campaign_id:campaignId,p_numbers:numbers})
