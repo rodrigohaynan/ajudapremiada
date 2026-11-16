@@ -3,21 +3,111 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Logo } from '../components/Layout'
 
-export default function Auth(){
- const {login,register}=useAuth(),nav=useNavigate()
- const [mode,setMode]=useState(() => new URLSearchParams(window.location.search).get('mode') === 'register' ? 'register' : 'login'),[name,setName]=useState(''),[email,setEmail]=useState(''),[password,setPassword]=useState('')
- const [error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false)
- const submit=async e=>{
-   e.preventDefault();setError('');setNotice('');setBusy(true)
-   try{
-     if(mode==='login'){await login({email,password});nav('/painel')}
-     else{
-       const result=await register({name,email,password})
-       if(result.needsConfirmation)setNotice('Conta criada. Confirme seu e-mail para entrar no Ajude e Ganhe.')
-       else nav('/painel')
-     }
-   }catch(err){setError(err.message||'Não foi possível entrar.')}
-   finally{setBusy(false)}
- }
- return <main className="auth"><section className="authSide"><div><span>♥</span><h1>Ajude causas.<br/>Acompanhe números.<br/>Crie campanhas.</h1><p>O Ajude e Ganhe reúne tudo em uma experiência simples e organizada.</p></div></section><section className="authForm"><div className="authBox"><Logo/><span className="eyebrow">{mode==='login'?'BEM-VINDO DE VOLTA':'CRIE SUA CONTA'}</span><h2>{mode==='login'?'Entre na sua conta':'Comece no Ajude e Ganhe'}</h2><p>{mode==='login'?'Acesse suas participações e campanhas.':'Participe, acompanhe e crie suas próprias campanhas.'}</p><form onSubmit={submit}>{mode==='register'&&<label>Nome completo<input required value={name} onChange={e=>setName(e.target.value)}/></label>}<label>E-mail<input type="email" required value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Senha<input type="password" minLength="6" required value={password} onChange={e=>setPassword(e.target.value)}/></label>{error&&<div className="error">{error}</div>}{notice&&<div className="success">{notice}</div>}<button disabled={busy} className="btn primary wide">{busy?'Aguarde...':mode==='login'?'Entrar':'Criar conta'}</button></form><p className="switch">{mode==='login'?'Ainda não tem conta?':'Já tem conta?'} <button onClick={()=>{setMode(mode==='login'?'register':'login');setError('');setNotice('')}}>{mode==='login'?'Cadastre-se':'Entrar'}</button></p><small className="prototype">Conta protegida pelo Supabase Auth. As campanhas e participações ficam vinculadas ao seu usuário.</small><Link className="back" to="/">← Voltar ao início</Link></div></section></main>
+export default function Auth() {
+  const { login, register, requestPasswordReset } = useAuth()
+  const navigate = useNavigate()
+  const [mode, setMode] = useState(() => {
+    const selected = new URLSearchParams(window.location.search).get('mode')
+    return selected === 'register' ? 'register' : selected === 'forgot' ? 'forgot' : 'login'
+  })
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const changeMode = next => {
+    setMode(next)
+    setError('')
+    setNotice('')
+    setPassword('')
+  }
+
+  const submit = async event => {
+    event.preventDefault()
+    if (busy) return
+    setError('')
+    setNotice('')
+    setBusy(true)
+    try {
+      if (mode === 'login') {
+        await login({ email: email.trim(), password })
+        navigate('/painel')
+      } else if (mode === 'register') {
+        const result = await register({ name, email: email.trim(), password })
+        if (result.needsConfirmation) {
+          setNotice('Conta criada. Confirme seu e-mail para entrar no Ajude e Ganhe.')
+        } else {
+          navigate('/painel')
+        }
+      } else {
+        await requestPasswordReset(email.trim())
+        setNotice('Se existir uma conta com este e-mail, você receberá um link para redefinir sua senha. Confira também a caixa de spam.')
+      }
+    } catch (err) {
+      setError(err.message || 'Não foi possível concluir a solicitação. Tente novamente.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const title = mode === 'login'
+    ? 'Entre na sua conta'
+    : mode === 'register' ? 'Comece no Ajude e Ganhe' : 'Recuperar sua senha'
+
+  return <main className="auth">
+    <section className="authSide">
+      <div>
+        <span>♥</span>
+        <h1>Ajude causas.<br/>Acompanhe números.<br/>Crie campanhas.</h1>
+        <p>O Ajude e Ganhe reúne tudo em uma experiência simples e organizada.</p>
+      </div>
+    </section>
+    <section className="authForm">
+      <div className="authBox">
+        <Logo/>
+        <span className="eyebrow">
+          {mode === 'login' ? 'BEM-VINDO DE VOLTA' : mode === 'register' ? 'CRIE SUA CONTA' : 'REDEFINIÇÃO DE SENHA'}
+        </span>
+        <h2>{title}</h2>
+        <p>{mode === 'forgot'
+          ? 'Informe o e-mail da sua conta para receber as instruções de redefinição.'
+          : mode === 'login' ? 'Acesse suas participações e campanhas.'
+          : 'Participe, acompanhe e crie suas próprias campanhas.'}</p>
+        <form onSubmit={submit}>
+          {mode === 'register' && <label>Nome completo
+            <input autoComplete="name" required value={name} onChange={event => setName(event.target.value)}/>
+          </label>}
+          <label>E-mail
+            <input type="email" autoComplete="email" required value={email} onChange={event => setEmail(event.target.value)} placeholder="seuemail@exemplo.com"/>
+          </label>
+          {mode !== 'forgot' && <label>Senha
+            <input type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+              minLength="6" required value={password} onChange={event => setPassword(event.target.value)}/>
+          </label>}
+          {mode === 'login' && <div className="authForgot">
+            <button type="button" onClick={() => changeMode('forgot')}>Esqueci minha senha</button>
+          </div>}
+          {error && <div className="error" role="alert">{error}</div>}
+          {notice && <div className="success authNotice" role="status">{notice}</div>}
+          <button type="submit" disabled={busy} className="btn primary wide">
+            {busy ? 'Aguarde…' : mode === 'login' ? 'Entrar' : mode === 'register' ? 'Criar conta' : 'Enviar link para redefinir senha'}
+          </button>
+        </form>
+        <p className="switch">
+          {mode === 'forgot'
+            ? <button type="button" onClick={() => changeMode('login')}>← Voltar para o login</button>
+            : <>
+                {mode === 'login' ? 'Ainda não tem conta?' : 'Já tem conta?'}{' '}
+                <button type="button" onClick={() => changeMode(mode === 'login' ? 'register' : 'login')}>
+                  {mode === 'login' ? 'Cadastre-se' : 'Entrar'}
+                </button>
+              </>}
+        </p>
+        <small className="prototype">Conta protegida pelo Supabase Auth. Nunca informe sua senha ou código de recuperação a outras pessoas.</small>
+        <Link className="back" to="/">← Voltar ao início</Link>
+      </div>
+    </section>
+  </main>
 }
