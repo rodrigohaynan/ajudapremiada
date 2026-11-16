@@ -137,3 +137,115 @@
 .ownedArchived{opacity:.92}
 .archivedBuybox p{font-size:13px;line-height:1.7;color:#546a63}
 @media(max-width:600px){.manageCampaign{padding:17px}.manageCampaign>.btn{width:100%}}
+
+
+/* Página inicial: eliminar espaços verticais excessivos em celulares.
+   Escopo restrito a .homePage para preservar outras telas do sistema. */
+@media (max-width:720px){
+  .homePage .heroGrid{
+    min-height:0;
+    grid-template-columns:minmax(0,1fr);
+    gap:0;
+    padding:36px 0 30px;
+  }
+  /* A arte decorativa estava adicionando mais de 330px após o formulário
+     e separando desnecessariamente a primeira seção dos indicadores. */
+  .homePage .heroArt{display:none}
+  .homePage .hero h1{
+    font-size:clamp(32px,8vw,42px);
+    line-height:1.12;
+    letter-spacing:-1.5px;
+    margin:15px 0 14px;
+  }
+  .homePage .hero p{
+    font-size:15px;
+    line-height:1.58;
+    margin:0;
+  }
+  .homePage .search{margin-top:22px}
+  .homePage .search input{font-size:14px}
+  .homePage .trust{
+    margin-top:13px;
+    gap:8px 15px;
+    flex-wrap:wrap;
+    font-size:10px;
+    line-height:1.45;
+  }
+  .homePage .stats div{padding:15px 8px}
+  .homePage .stats b{font-size:21px}
+  .homePage .stats span{display:block;line-height:1.35}
+  .homePage .section{padding-top:34px;padding-bottom:34px}
+  .homePage .heading{margin-bottom:18px;gap:12px}
+  .homePage .heading h2,.homePage .center h2{
+    font-size:clamp(23px,6vw,29px);
+    line-height:1.22;
+    margin:7px 0 0;
+  }
+  .homePage .heading>a{flex-shrink:0;line-height:1.4}
+  .homePage .center{margin:0 auto 21px}
+  .homePage .steps{gap:11px}
+  .homePage .steps article{padding:17px 15px;min-width:0}
+  .homePage .steps h3{margin:9px 0 6px}
+  .homePage .steps p{margin:0;line-height:1.48}
+  .homePage .cta{
+    margin-top:29px;
+    margin-bottom:34px;
+    padding:25px 22px;
+    grid-template-columns:minmax(0,1fr);
+    gap:0;
+  }
+  .homePage .cta h2{
+    font-size:clamp(24px,6vw,30px);
+    line-height:1.25;
+    margin:9px 0 12px;
+  }
+  .homePage .cta p{font-size:13px;line-height:1.6;margin:0 0 18px}
+  .homePage .ctaIcon{display:none}
+  body:has(.homePage) footer{padding:27px 0}
+  body:has(.homePage) .foot{gap:20px}
+  body:has(.homePage) .foot>div{gap:8px}
+  body:has(.homePage) .foot p{margin:5px 0}
+}
+@media (max-width:480px){
+  /* Destacar campanhas compactamente, sem cartões excessivamente altos. */
+  .homePage .grid{grid-template-columns:minmax(0,1fr);gap:13px}
+  .homePage .grid .card{
+    display:grid;
+    grid-template-columns:minmax(115px,37%) minmax(0,1fr);
+    min-height:180px;
+  }
+  .homePage .grid .card .cover{height:100%;min-height:180px}
+  .homePage .grid .card .cardbody{padding:12px 11px;min-width:0}
+  .homePage .grid .card .cardbody h3{
+    min-height:0;
+    margin:5px 0 7px;
+    font-size:14px;
+    line-height:1.25;
+  }
+  .homePage .grid .card .cardbody>p{margin-bottom:8px}
+  .homePage .grid .card .prize{padding:8px}
+  .homePage .grid .card .prize b{line-height:1.3}
+  .homePage .grid .card .progress{margin:10px 0 7px}
+  .homePage .grid .card .cardfoot{gap:6px;align-items:flex-end}
+  .homePage .grid .card .cardfoot>b{white-space:nowrap;font-size:11px}
+  .homePage .grid .card .badges{left:8px;right:5px;top:8px}
+  .homePage .grid .card .badges i{font-size:8px;padding:4px 5px}
+  /* Quatro passos em duas colunas: aproximadamente metade da altura anterior. */
+  .homePage .steps{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .homePage .steps article{padding:15px 12px;border-radius:14px}
+  .homePage .steps article>span{font-size:24px}
+  .homePage .steps article>b{right:12px;top:10px;font-size:17px}
+  .homePage .steps h3{font-size:14px}
+  .homePage .steps p{font-size:10px;line-height:1.5}
+  .homePage .search button{padding:10px 13px}
+  .homePage .search{grid-template-columns:25px minmax(0,1fr) auto}
+  .homePage .stats div{padding:14px 9px}
+  body:has(.homePage) .foot{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px 16px}
+  body:has(.homePage) .foot>div:first-child{grid-column:1/-1}
+}
+@media(max-width:355px){
+  .homePage .grid .card{grid-template-columns:minmax(0,1fr)}
+  .homePage .grid .card .cover{height:160px;min-height:160px}
+  .homePage .grid .card .cardbody{padding:13px}
+  .homePage .steps{grid-template-columns:minmax(0,1fr)}
+}
