@@ -11,6 +11,7 @@ const localService={
  async createCampaign(payload,user){const all=await this.listCampaigns();const stamp=Date.now();const slug=(payload.title||'campanha').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'')+'-'+String(stamp).slice(-4);const item={...payload,id:`c-${stamp}`,slug,ownerId:user.id,organizer:user.name,verified:false,sold:0,createdAt:new Date().toISOString()};write(K.campaigns,[item,...all]);return item},
  async reserveNumbers({campaignId,numbers,user,amount}){const all=read(K.parts,[]);const item={id:`p-${Date.now()}`,campaignId,numbers,userId:user.id,userName:user.name,amount,status:'aguardando-pagamento',createdAt:new Date().toISOString(),payment:null};write(K.parts,[item,...all]);return item},
  async getPaymentSettings(){return {pixKey:'',pixHolder:''}},
+ async reserveGuestNumbers(){throw new Error('A participação sem cadastro exige conexão com o Supabase.')},
  async updateCampaign(id,payload,user){
   const all=await this.listCampaigns()
   const old=all.find(c=>c.id===id&&c.ownerId===user.id)
