@@ -271,3 +271,16 @@
   .authBox label{font-size:12px;gap:6px}
   .authBox input{width:100%;min-height:46px;font-size:16px}
 }
+
+
+/* Identificação de participações realizadas sem sessão de login */
+.guestLinkCard{background:#f1faf7;border:1px solid #cde8dd;border-radius:16px;padding:22px;margin-top:20px}
+.guestLinkCard h2{font:800 20px Manrope,sans-serif;margin:7px 0 9px;color:#183d33}
+.guestLinkCard p{font-size:12px;color:#556e65;line-height:1.65;max-width:690px}
+.guestLinkForm{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-top:14px}
+.guestLinkForm label{display:flex;flex-direction:column;gap:8px;font-size:12px;font-weight:700;min-width:230px;flex:1 1 230px;max-width:340px}
+.guestLinkForm input{background:#fff;border:1px solid #b6d2c7;border-radius:10px;padding:12px 14px;font-size:16px;min-height:44px;width:100%;box-sizing:border-box}
+.guestLinkForm button{min-height:44px}
+.guestLinkCard .error{margin-top:10px}
+.guestLinkNotice{background:#edf8f0;color:#2b7353;border:1px solid #c7e9d3;border-radius:10px;padding:11px 14px;margin-top:18px;font-size:12px}
+@media(max-width:550px){.guestLinkCard{padding:16px}.guestLinkForm label{max-width:none}.guestLinkForm button{width:100%}}
