@@ -69,7 +69,7 @@ function drawGrid(ctx,statuses,quantity){
       const [name,nums,bg]=groups[g],y=1110+g*125
       round(ctx,75,y,930,108,14,bg)
       drawText(ctx,name,94,y+33,830,'800 23px Arial',brand)
-      const text=nums.length?nums.slice(0,14).map(n=>String(n).padStart(3,'0')).join(' · ')+(nums.length>14?' · ...'):'Nenhum'
+      const text=nums.length?nums.slice(0,14).map(n=>String(n).padStart(3,'0')).join(' · ')+(nums.length>14?' · ...':''):'Nenhum'
       drawText(ctx,text,94,y+77,860,'600 26px Arial','#213731')
     }
   }
