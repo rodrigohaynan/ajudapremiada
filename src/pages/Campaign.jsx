@@ -4,7 +4,6 @@ import { dataService } from '../services/dataService'
 import { money } from '../components/CampaignCard'
 import { useAuth } from '../context/AuthContext'
 import ManualProofForm from '../components/ManualProofForm'
-import StatusShare from '../components/StatusShare'
 
 const dateBR = value => value ? new Intl.DateTimeFormat('pt-BR').format(new Date(`${value}T12:00:00`)) : 'Conforme regra'
 
@@ -121,7 +120,6 @@ export default function Campaign() {
           </div>
           {shareStatus && <p role="status">{shareStatus}</p>}
         </div>
-        <StatusShare campaign={c}/>
         <div className="infoCards"><article><small>Valor por número</small><b>{money(c.price)}</b></article><article><small>Quantidade</small><b>{c.quantity}</b></article><article><small>Sorteio</small><b>{c.drawType === 'date' ? dateBR(c.drawDate) : 'Ao preencher'}</b></article></div>
         <article className="box"><h2>🎁 {c.prizes?.length > 1 ? 'Prêmios' : 'Prêmio'}</h2><ul>{c.prizes?.map((prize, i) => <li key={`${prize}-${i}`}><b>{i + 1}º</b> {prize}</li>)}</ul></article>
         <article className="box"><h2>♥ Sobre a causa</h2><p><b>{c.cause}</b></p><p>{c.customText}</p></article>
