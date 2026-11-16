@@ -70,6 +70,7 @@ const toCampaign = row => ({
   quantity: row.quantity,
   price: Number(row.price),
   sold: Number(row.sold ?? 0),
+  unavailable: Number(row.unavailable ?? row.sold ?? 0),
   drawType: row.draw_type,
   drawDate: row.draw_date,
   drawRule: row.draw_rule,
@@ -83,18 +84,28 @@ const toCampaign = row => ({
   updatedAt: row.updated_at,
 })
 
-async function paidCount(campaignId){
-  const { count, error } = await supabase
-    .from('campaign_numbers')
+// A contagem pública usa somente dois estados: disponível / indisponível.
+// Uma reserva expirada volta a ser considerada livre, mesmo quando a linha
+// continua marcada como 'reserved' até a próxima atualização.
+async function countCampaignNumbers(campaignId){
+  const now=new Date().toISOString()
+  const base=()=>supabase.from('campaign_numbers')
     .select('*',{count:'exact',head:true})
     .eq('campaign_id',campaignId)
-    .eq('status','paid')
-  if(error) throw error
-  return count || 0
+  const [paidResult,reservedResult]=await Promise.all([
+    base().eq('status','paid'),
+    base().eq('status','reserved').gt('reserved_until',now)
+  ])
+  if(paidResult.error)throw paidResult.error
+  if(reservedResult.error)throw reservedResult.error
+  const sold=paidResult.count||0
+  return {sold,unavailable:sold+(reservedResult.count||0)}
 }
 
 async function enrichCampaigns(rows=[]){
-  return Promise.all(rows.map(async row=>toCampaign({...row,sold:await paidCount(row.id)})))
+  return Promise.all(rows.map(async row=>
+    toCampaign({...row,...await countCampaignNumbers(row.id)})
+  ))
 }
 
 async function uploadCover(dataUrl,userId){
@@ -142,7 +153,7 @@ const supabaseService={
     if(error) throw error
   }
   if(!data) return null
-  return toCampaign({...data,sold:await paidCount(data.id)})
+  return toCampaign({...data,...await countCampaignNumbers(data.id)})
  },
  async createCampaign(payload,user){
   let uploadedPath=null
