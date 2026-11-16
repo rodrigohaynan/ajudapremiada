@@ -5,7 +5,7 @@ import { Logo } from '../components/Layout'
 
 export default function Auth(){
  const {login,register}=useAuth(),nav=useNavigate()
- const [mode,setMode]=useState('login'),[name,setName]=useState(''),[email,setEmail]=useState(''),[password,setPassword]=useState('')
+ const [mode,setMode]=useState(() => new URLSearchParams(window.location.search).get('mode') === 'register' ? 'register' : 'login'),[name,setName]=useState(''),[email,setEmail]=useState(''),[password,setPassword]=useState('')
  const [error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false)
  const submit=async e=>{
    e.preventDefault();setError('');setNotice('');setBusy(true)
