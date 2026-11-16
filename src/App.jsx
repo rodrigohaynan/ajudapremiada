@@ -1,4 +1,5 @@
-import { Route, Routes } from 'react-router-dom'
+import { useLayoutEffect } from 'react'
+import { Route, Routes, useLocation } from 'react-router-dom'
 import Layout from './components/Layout'
 import Home from './pages/Home'
 import Explore from './pages/Explore'
@@ -8,8 +9,23 @@ import Create from './pages/Create'
 import Dashboard from './pages/Dashboard'
 import How from './pages/How'
 
+function ScrollToTopOnNavigation(){
+  const { pathname } = useLocation()
+
+  useLayoutEffect(() => {
+    // React Router mantém a rolagem ao trocar páginas por links internos.
+    // O hash é ignorado para não interferir no link privado de reservas.
+    window.scrollTo(0, 0)
+    document.documentElement.scrollTop = 0
+  }, [pathname])
+
+  return null
+}
+
 export default function App(){
-  return <Routes>
+  return <>
+    <ScrollToTopOnNavigation/>
+    <Routes>
     <Route path="/entrar" element={<Auth/>}/>
     <Route element={<Layout/>}>
       <Route path="/" element={<Home/>}/>
@@ -21,5 +37,6 @@ export default function App(){
       <Route path="/como-funciona" element={<How/>}/>
       <Route path="*" element={<main className="shell page"><div className="empty"><b>404</b><h1>Página não encontrada</h1></div></main>}/>
     </Route>
-  </Routes>
+    </Routes>
+  </>
 }
