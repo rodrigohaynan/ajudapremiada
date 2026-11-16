@@ -1,16 +1,18 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
-const origin="https://ajude-e-ganhe.netlify.app";
+const allowedOrigins = new Set([
+ "https://ajudeeganhe.com.br",
+ "https://www.ajudeeganhe.com.br",
+ "https://ajude-e-ganhe.netlify.app"
+]);
 const base=Deno.env.get("SUPABASE_URL")||"";
 const service=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
-const cors={
- "access-control-allow-origin":origin,
+const baseCors={
  "access-control-allow-headers":"authorization,apikey,content-type,x-client-info",
  "access-control-allow-methods":"POST,OPTIONS",
  "content-type":"application/json; charset=utf-8",
  "cache-control":"no-store"
 };
-const reply=(data:unknown,status=200)=>new Response(JSON.stringify(data),{status,headers:cors});
 const isUuid=(value:unknown)=>typeof value==="string"&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 const isToken=(value:unknown)=>typeof value==="string"&&/^[0-9a-f]{64}$/.test(value);
 async function tokenHash(token:string){
@@ -79,10 +81,17 @@ async function uploadFile(id:string,file:File){
  return path;
 }
 Deno.serve(async(req:Request)=>{
+ const requestOrigin=req.headers.get("origin");
+ const cors={
+  ...baseCors,
+  ...(requestOrigin&&allowedOrigins.has(requestOrigin)
+   ?{"access-control-allow-origin":requestOrigin,"vary":"Origin"}:{})
+ };
+ const reply=(data:unknown,status=200)=>new Response(JSON.stringify(data),{status,headers:cors});
+ if(requestOrigin&&!allowedOrigins.has(requestOrigin))
+  return reply({error:"Origem inválida."},403);
  if(req.method==="OPTIONS")return new Response(null,{headers:cors});
  if(req.method!=="POST")return reply({error:"Método não permitido."},405);
- const from=req.headers.get("origin");
- if(from&&from!==origin)return reply({error:"Origem inválida."},403);
  if(!base||!service)return reply({error:"Serviço temporariamente indisponível."},503);
  try{
   const type=req.headers.get("content-type")||"";
