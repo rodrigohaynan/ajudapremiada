@@ -114,14 +114,14 @@ export default function Campaign() {
           {c.coverImage ? <img src={c.coverImage} alt={`Imagem principal de ${c.title}`} /> : (c.emoji || '🎁')}
           <div className="badges"><i>{c.category}</i>{c.verified && <i>✓ Verificada</i>}</div>
         </div>
-        <div className="detailTitle"><small>📍 {c.city}/{c.state} • por {c.organizer}</small><h1>{c.title}</h1><p>{c.description}</p>
+        <div className="detailTitle"><small>📍 {c.city}/{c.state} • por {c.organizer}</small><h1>{c.title}</h1>{c.status==='archived'&&<div className="archivedNotice">📁 Campanha arquivada — não aceita novas participações. Registros anteriores preservados.</div>}<p>{c.description}</p>
           <div className="shareActions">
             <button className="btn primary" type="button" onClick={shareCampaign}>↗ Compartilhar campanha</button>
             {user?.id === c.ownerId && <Link className="btn ghost" to={'/campanha/' + c.slug + '/editar'}>✎ Editar campanha</Link>}
           </div>
           {shareStatus && <p role="status">{shareStatus}</p>}
         </div>
-        <StatusShare campaign={c}/>
+        {c.status !== 'archived' && <StatusShare campaign={c}/>}
         <div className="infoCards"><article><small>Valor por número</small><b>{money(c.price)}</b></article><article><small>Quantidade</small><b>{c.quantity}</b></article><article><small>Sorteio</small><b>{c.drawType === 'date' ? dateBR(c.drawDate) : 'Ao preencher'}</b></article></div>
         <article className="box"><h2>🎁 {c.prizes?.length > 1 ? 'Prêmios' : 'Prêmio'}</h2><ul>{c.prizes?.map((prize, i) => <li key={`${prize}-${i}`}><b>{i + 1}º</b> {prize}</li>)}</ul></article>
         <article className="box"><h2>♥ Sobre a causa</h2><p><b>{c.cause}</b></p><p>{c.customText}</p></article>
@@ -129,7 +129,16 @@ export default function Campaign() {
       </section>
 
       <aside>
-        <div className="buybox">
+        {c.status==='archived' ?
+          <div className="buybox archivedBuybox">
+            <span className="eyebrow">CAMPANHA ARQUIVADA</span>
+            <h2>Novas participações encerradas</h2>
+            <p>O link permanece disponível para consultar a campanha e acompanhar reservas anteriores.</p>
+            {recoverError&&<div className="error" role="alert">{recoverError}</div>}
+            {payment&&<ManualProofForm reservation={payment} user={user}
+              onChange={setPayment} onReset={()=>setPayment(null)} />}
+          </div>
+        : <div className="buybox">
           <span className="eyebrow">ESCOLHA SEUS NÚMEROS</span>
           <h2>{selected.length ? `${selected.length} selecionado(s)` : 'Toque nos números disponíveis'}</h2>
           <div className="numberGrid">{Array.from({ length: c.quantity }, (_, i) => i + 1).map(number => <button key={number} disabled={reserved.includes(number)} onClick={() => toggle(number)} className={selected.includes(number) ? 'sel' : ''}>{String(number).padStart(3, '0')}</button>)}</div>
@@ -179,7 +188,7 @@ export default function Campaign() {
               <span>Comprovantes enviados em até 30 minutos preservam os números por até 3 dias para conferência.</span>
             </div>
           </>}
-        </div>
+        </div>}
       </aside>
     </div>
   </main>
