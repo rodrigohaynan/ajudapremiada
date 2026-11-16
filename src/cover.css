@@ -259,3 +259,15 @@
   .homePage .grid .card .cardbody{padding:13px}
   .homePage .steps{grid-template-columns:minmax(0,1fr)}
 }
+
+
+/* Cadastro completo com CPF, celular e confirmação de senha */
+.authRegistrationHint{display:block;color:#657a73;font-size:11px;line-height:1.6;margin:1px 0 2px}
+.authBox input[type="tel"]{font-variant-numeric:tabular-nums}
+@media (max-width:720px){
+  .authForm{min-height:100dvh;place-items:start center;padding:30px 22px 38px}
+  .authBox>.logo{margin-bottom:30px}
+  .authBox form{gap:12px}
+  .authBox label{font-size:12px;gap:6px}
+  .authBox input{width:100%;min-height:46px;font-size:16px}
+}
