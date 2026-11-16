@@ -210,6 +210,49 @@ const supabaseService={
   if(!data?.id || !data?.expiresAt)throw new Error('Não foi possível confirmar a reserva.')
   return data
  },
+ async listNumberStatuses(campaignId){
+  const {data,error}=await supabase.from('campaign_numbers')
+    .select('number,status,reserved_until').eq('campaign_id',campaignId).order('number')
+  if(error) throw error
+  return data||[]
+ },
+ async getManualReservation(id,accessToken){
+  const {data,error}=await supabase.functions.invoke('manual-payment-proof',{
+    body:{action:'status',id,token:accessToken}
+  })
+  if(error){
+    try{const m=await error.context.json();throw Error(m.error||'Não foi possível consultar a reserva.')}
+    catch(e){throw Error(e.message||'Não foi possível consultar a reserva.')}
+  }
+  if(data?.error)throw Error(data.error)
+  return {...data,accessToken}
+ },
+ async submitManualProof(reservation,file){
+  if(!file)throw Error('Selecione um comprovante.')
+  if(file.size>5*1024*1024)throw Error('Arquivo maior que 5 MB.')
+  const form=new FormData()
+  form.set('id',reservation.id)
+  form.set('token',reservation.accessToken)
+  form.set('file',file)
+  const response=await fetch(import.meta.env.VITE_SUPABASE_URL+'/functions/v1/manual-payment-proof',{
+    method:'POST',headers:{apikey:import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY},body:form
+  })
+  const data=await response.json().catch(()=>({}))
+  if(!response.ok)throw Error(data.error||'Não foi possível enviar o comprovante.')
+  return data
+ },
+ async listPendingManualReceipts(){
+  const {data,error}=await supabase.functions.invoke('manual-payment-proof',{body:{action:'pending'}})
+  if(error)throw Error('Não foi possível carregar os comprovantes do organizador.')
+  return data.items||[]
+ },
+ async reviewManualReceipt(id,decision){
+  const {data,error}=await supabase.functions.invoke('manual-payment-proof',{
+    body:{action:'review',id,decision}
+  })
+  if(error||!data?.ok)throw Error(data?.error||'Não foi possível confirmar o pagamento.')
+  return data
+ },
  async listParticipations(userId){
   const {data,error}=await supabase.from('participations')
     .select('*, participation_numbers(number), campaigns(title,slug)')
