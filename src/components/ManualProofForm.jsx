@@ -34,6 +34,33 @@ export default function ManualProofForm({reservation,user,onChange,onReset}){
     }catch(e){setError(e.message||'Não foi possível consultar a reserva.')}
     finally{setBusy(false)}
   }
+  const [pixCopied,setPixCopied]=useState(false)
+  const copyPix=async()=>{
+    const key=reservation.payment?.pixKey
+    if(!key)return
+    setPixCopied(false)
+    try{
+      if(navigator.clipboard?.writeText){
+        await navigator.clipboard.writeText(key)
+      }else{
+        const field=document.createElement('textarea')
+        field.value=key
+        field.setAttribute('readonly','')
+        field.style.position='fixed'
+        field.style.opacity='0'
+        document.body.appendChild(field)
+        field.select()
+        const success=document.execCommand('copy')
+        document.body.removeChild(field)
+        if(!success)throw new Error('Clipboard unavailable')
+      }
+      setPixCopied(true)
+      setNote('Chave Pix copiada! Abra o aplicativo do seu banco e cole a chave para realizar o pagamento.')
+      setError('')
+    }catch{
+      setError('Não foi possível copiar automaticamente. Toque e segure a chave Pix para copiá-la.')
+    }
+  }
   const copy=async()=>{
     const url=window.location.origin+window.location.pathname+
       '#reserva='+encodeURIComponent(reservation.id)+'&token='+encodeURIComponent(reservation.accessToken)
@@ -56,7 +83,12 @@ export default function ManualProofForm({reservation,user,onChange,onReset}){
     }
     {showPix&&<div className="pix">
       <b>Dados do Pix manual</b>
-      <span>Chave: <strong>{reservation.payment.pixKey}</strong></span>
+      <div className="pixKeyRow">
+        <span>Chave: <strong>{reservation.payment.pixKey}</strong></span>
+        <button type="button" className="btn primary pixCopyButton" onClick={copyPix}>
+          {pixCopied ? '✓ Chave copiada!' : '📋 Copiar chave Pix'}
+        </button>
+      </div>
       <span>Titular: <strong>{reservation.payment.pixHolder}</strong></span>
       <small>O Pix não é confirmado automaticamente. Guarde o comprovante e envie-o abaixo.</small>
     </div>}
