@@ -48,7 +48,7 @@
 .guestParticipantForm h3{font:800 17px/1.3 Manrope,sans-serif;margin:0}
 .guestParticipantForm>p{font-size:12px;line-height:1.55;color:#687875;margin:0}
 .guestParticipantForm label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:750;color:#263b37}
-.guestParticipantForm input{width:100%;min-width:0;border:1px solid #cddad6;border-radius:11px;font:500 15px/1.4 inherit;padding:12px 13px;background:#fff;color:#233630;box-sizing:border-box}
+.guestParticipantForm input{width:100%;min-width:0;border:1px solid #cddad6;border-radius:11px;font:500 15px/1.4 Manrope,sans-serif;padding:12px 13px;background:#fff;color:#233630;box-sizing:border-box}
 .guestParticipantForm input:focus{outline:2px solid #7fc7b9;outline-offset:1px}
 .guestPhoneRow{display:grid;grid-template-columns:minmax(75px,90px) minmax(0,1fr);gap:12px}
 .guestPrivacy{font-size:10px;line-height:1.5;color:#71827e;display:block}
