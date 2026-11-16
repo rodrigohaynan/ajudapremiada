@@ -1,18 +1,18 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
-const origin = "https://ajude-e-ganhe.netlify.app";
+const allowedOrigins = new Set([
+  "https://ajudeeganhe.com.br",
+  "https://www.ajudeeganhe.com.br",
+  "https://ajude-e-ganhe.netlify.app"
+]);
 const url = Deno.env.get("SUPABASE_URL") || "";
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const headers = {
-  "access-control-allow-origin": origin,
+const baseHeaders = {
   "access-control-allow-headers": "authorization, apikey, content-type, x-client-info",
   "access-control-allow-methods": "POST, OPTIONS",
   "cache-control": "no-store",
   "content-type": "application/json; charset=utf-8"
 };
-const send = (body: Record<string, unknown>, status = 200) =>
-  new Response(JSON.stringify(body), {status, headers});
-
 async function adminRpc(fn: string, data: Record<string, unknown>) {
   const response = await fetch(url + "/rest/v1/rpc/" + fn, {
     method: "POST",
@@ -57,10 +57,20 @@ const messages: Record<string,string> = {
 };
 
 Deno.serve(async (req: Request) => {
+  const requestOrigin = req.headers.get("origin");
+  const headers = {
+    ...baseHeaders,
+    ...(requestOrigin && allowedOrigins.has(requestOrigin)
+      ? {"access-control-allow-origin": requestOrigin, "vary": "Origin"}
+      : {})
+  };
+  const send = (body: Record<string, unknown>, status = 200) =>
+    new Response(JSON.stringify(body), {status, headers});
+
+  if (requestOrigin && !allowedOrigins.has(requestOrigin))
+    return send({error:"Origem inválida."},403);
   if (req.method === "OPTIONS") return new Response(null, {headers});
   if (req.method !== "POST") return send({error:"Método não permitido."},405);
-  if (req.headers.get("origin") && req.headers.get("origin") !== origin)
-    return send({error:"Origem inválida."},403);
   if (!url || !serviceKey) return send({error:"Reservas temporariamente indisponíveis."},503);
 
   let payload: Record<string,unknown>;
