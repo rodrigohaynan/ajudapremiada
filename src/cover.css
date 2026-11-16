@@ -101,3 +101,10 @@
  .paymentReview{padding:15px}
  .paymentReviewTop{flex-direction:column}
 }
+
+
+/* Ação rápida de copiar chave Pix no pagamento manual */
+.pixKeyRow{display:flex;flex-direction:column;align-items:flex-start;gap:11px;padding:12px 0;overflow-wrap:anywhere}
+.pixKeyRow>span{display:block;font-size:13px;line-height:1.6;word-break:break-all}
+.pixKeyRow .pixCopyButton{display:inline-flex;align-items:center;justify-content:center;font-size:13px;padding:11px 16px;min-height:44px;max-width:100%}
+@media(max-width:480px){.pixKeyRow .pixCopyButton{width:100%}}
