@@ -209,12 +209,24 @@
 @media (max-width:480px){
   /* Destacar campanhas compactamente, sem cartões excessivamente altos. */
   .homePage .grid{grid-template-columns:minmax(0,1fr);gap:13px}
+  /* Mostrar a imagem acima do conteúdo: a coluna lateral reduzia a foto
+     centralizada (capa horizontal) a uma miniatura difícil de visualizar. */
   .homePage .grid .card{
-    display:grid;
-    grid-template-columns:minmax(115px,37%) minmax(0,1fr);
-    min-height:180px;
+    display:flex;
+    flex-direction:column;
+    min-height:0;
   }
-  .homePage .grid .card .cover{height:100%;min-height:180px}
+  .homePage .grid .card .cover{
+    width:100%;
+    height:auto;
+    min-height:0;
+    aspect-ratio:1200/630;
+    flex-shrink:0;
+  }
+  .homePage .grid .card .cover.withImage>img{
+    object-fit:contain;
+    object-position:center;
+  }
   .homePage .grid .card .cardbody{padding:12px 11px;min-width:0}
   .homePage .grid .card .cardbody h3{
     min-height:0;
@@ -244,8 +256,6 @@
   body:has(.homePage) .foot>div:first-child{grid-column:1/-1}
 }
 @media(max-width:355px){
-  .homePage .grid .card{grid-template-columns:minmax(0,1fr)}
-  .homePage .grid .card .cover{height:160px;min-height:160px}
   .homePage .grid .card .cardbody{padding:13px}
   .homePage .steps{grid-template-columns:minmax(0,1fr)}
 }
