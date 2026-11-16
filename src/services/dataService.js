@@ -187,6 +187,28 @@ const supabaseService={
     payment:payment?.[0] ? {pixKey:payment[0].pix_key,pixHolder:payment[0].pix_holder}:null
   }
  },
+ async reserveGuestNumbers({campaignId,numbers,participant}){
+  const {data,error}=await supabase.functions.invoke('guest-reserve-numbers',{
+    body:{
+      campaignId,numbers,
+      fullName:participant.fullName,
+      ddd:participant.ddd,
+      phone:participant.phone,
+      email:participant.email
+    }
+  })
+  if(error){
+    let message='Não foi possível reservar os números.'
+    try {
+      const response=await error.context.json()
+      message=response?.error || message
+    } catch {}
+    throw new Error(message)
+  }
+  if(data?.error) throw new Error(data.error)
+  if(!data?.id || !data?.expiresAt)throw new Error('Não foi possível confirmar a reserva.')
+  return data
+ },
  async listParticipations(userId){
   const {data,error}=await supabase.from('participations')
     .select('*, participation_numbers(number), campaigns(title,slug)')
