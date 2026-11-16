@@ -102,9 +102,14 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const reservation = await adminRpc("reserve_guest_campaign_numbers",{
+    // Capacidade secreta única para acompanhar e enviar o comprovante sem login.
+    const tokenBytes = crypto.getRandomValues(new Uint8Array(32));
+    const accessToken = Array.from(tokenBytes, b => b.toString(16).padStart(2,"0")).join("");
+    const hashed = await crypto.subtle.digest("SHA-256",new TextEncoder().encode(accessToken));
+    const tokenHash = Array.from(new Uint8Array(hashed),b=>b.toString(16).padStart(2,"0")).join("");
+    const reservation = await adminRpc("reserve_manual_numbers_v2",{
       p_campaign_id:id,p_numbers:numbers,p_full_name:fullName,p_ddd:ddd,
-      p_phone:phone,p_email:email,p_user_id:userId
+      p_phone:phone,p_email:email,p_token_hash:tokenHash,p_user_id:userId
     });
     const item = Array.isArray(reservation) ? reservation[0] : null;
     if (!item?.participation_id) return send({error:"Não foi possível criar a reserva."},500);
@@ -119,7 +124,7 @@ Deno.serve(async (req: Request) => {
     });
     const settings = settingsResponse.ok ? await settingsResponse.json() : [];
     return send({
-      id:item.participation_id, campaignId:id, numbers,
+      id:item.participation_id, accessToken, campaignId:id, numbers,
       amount:Number(item.amount),status:"pending_payment",expiresAt:item.expires_at,
       payment:settings[0] ? {pixKey:settings[0].pix_key,pixHolder:settings[0].pix_holder} : null
     });
