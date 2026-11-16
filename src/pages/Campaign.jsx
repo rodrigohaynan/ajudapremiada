@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { dataService } from '../services/dataService'
 import { money } from '../components/CampaignCard'
 import { useAuth } from '../context/AuthContext'
@@ -9,7 +9,6 @@ const dateBR = value => value ? new Intl.DateTimeFormat('pt-BR').format(new Date
 export default function Campaign() {
   const { slug } = useParams()
   const { user } = useAuth()
-  const nav = useNavigate()
   const [c, setC] = useState(null)
   const [reserved, setReserved] = useState([])
   const [selected, setSelected] = useState([])
@@ -17,6 +16,16 @@ export default function Campaign() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [shareStatus, setShareStatus] = useState('')
+  const [participant,setParticipant] = useState({fullName:'',ddd:'',phone:'',email:''})
+  const changeParticipant = (field,value) => setParticipant(prev=>({...prev,[field]:value}))
+  useEffect(()=>{
+    if(!user) return
+    setParticipant(prev=>({
+      ...prev,
+      fullName:prev.fullName||user.name||'',
+      email:prev.email||user.email||''
+    }))
+  },[user?.id])
 
   useEffect(() => {
     dataService.getCampaign(slug).then(item => {
@@ -57,24 +66,26 @@ export default function Campaign() {
     }
   }
 
-  const reserve = async () => {
-    if (!user) { nav('/entrar'); return }
+  const reserve = async event => {
+    event.preventDefault()
     if (!selected.length || busy) return
     setError('')
     setBusy(true)
     const chosen=[...selected]
-    try{
-      const result=await dataService.reserveNumbers({ campaignId: c.id, numbers: chosen, user, amount: total })
+    try {
+      const result=await dataService.reserveGuestNumbers({
+        campaignId:c.id,numbers:chosen,participant
+      })
       setReserved(current=>[...new Set([...current,...chosen])])
       setSelected([])
-      setPayment(result.payment ? {...result.payment,amount:result.amount,expiresAt:result.expiresAt} : null)
-    }catch(err){
-      const message=String(err.message||'')
-      if(message.includes('NUMBER_UNAVAILABLE')){
-        setError('Um ou mais números acabaram de ser escolhidos por outra pessoa. Atualize a seleção e tente novamente.')
-        dataService.listReservedNumbers(c.id).then(setReserved)
-      }else setError(message||'Não foi possível registrar a participação.')
-    }finally{setBusy(false)}
+      setPayment(result)
+    } catch(err) {
+      const message=String(err.message||'Não foi possível registrar a reserva.')
+      if(message.includes('disponível')||message.includes('NUMBER_UNAVAILABLE')) {
+        dataService.listReservedNumbers(c.id).then(setReserved).catch(()=>{})
+      }
+      setError(message)
+    } finally {setBusy(false)}
   }
 
   return <main className="shell detailPage">
@@ -105,10 +116,54 @@ export default function Campaign() {
           <div className="numberGrid">{Array.from({ length: c.quantity }, (_, i) => i + 1).map(number => <button key={number} disabled={reserved.includes(number)} onClick={() => toggle(number)} className={selected.includes(number) ? 'sel' : ''}>{String(number).padStart(3, '0')}</button>)}</div>
           <div className="legend"><span>□ Disponível</span><span>■ Selecionado</span><span>▨ Reservado</span></div>
           <div className="total"><span>Total</span><b>{money(total)}</b></div>
-          {error&&<div className="error">{error}</div>}
-          <button disabled={busy} className="btn primary wide" onClick={reserve}>{user ? (busy?'Reservando...':'Reservar números') : 'Entrar para participar'}</button>
-          {payment && <div className="success">✓ Números reservados por 5 minutos.<br/>Faça o Pix de <b>{money(payment.amount)}</b> para <b>{payment.pixKey}</b> — {payment.pixHolder}.</div>}
-          {!payment && <div className="pix"><small>A chave Pix é exibida somente após a reserva dos números.</small><span>Isso protege os dados de pagamento do organizador.</span></div>}
+          {payment ? <div className="reservationConfirmed" role="status">
+            <h3>✓ Reserva registrada</h3>
+            <p>Seus números: <strong>{payment.numbers?.map(n=>String(n).padStart(3,'0')).join(', ')}</strong></p>
+            <p>Valor: <strong>{money(payment.amount)}</strong>. A reserva vale por 5 minutos, até {new Date(payment.expiresAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}.</p>
+            {payment.payment?.pixKey ?
+              <div className="pix"><b>Dados para o Pix</b><span>Chave: <strong>{payment.payment.pixKey}</strong></span><span>Titular: <strong>{payment.payment.pixHolder}</strong></span></div> :
+              <p>As instruções de pagamento não estão disponíveis neste momento. Entre em contato com o organizador.</p>}
+            <p className="paymentDisclaimer"><strong>Pagamento ainda não confirmado.</strong> A reserva, por si só, não confirma a participação definitiva no sorteio.</p>
+            {!user && <div className="registerInvite">
+              <h4>Quer acompanhar suas próximas participações?</h4>
+              <p>Você pode criar sua conta no Ajude e Ganhe, mas isso é opcional e não altera sua reserva atual.</p>
+              <Link className="btn primary" to="/entrar?mode=register">Criar conta gratuitamente (opcional)</Link>
+              <small>O cadastro posterior não vincula automaticamente esta reserva à sua conta.</small>
+            </div>}
+          </div> : <>
+            <form className="guestParticipantForm" onSubmit={reserve}>
+              <h3>Seus dados para participar</h3>
+              <p>Não é necessário criar uma conta ou senha. Identificaremos sua reserva pelos dados abaixo.</p>
+              <label>Nome completo
+                <input name="fullName" type="text" autoComplete="name" minLength="5" maxLength="120"
+                  value={participant.fullName} required placeholder="Seu nome e sobrenome"
+                  onChange={e=>changeParticipant('fullName',e.target.value)} />
+              </label>
+              <div className="guestPhoneRow">
+                <label>DDD
+                  <input name="ddd" type="tel" inputMode="numeric" pattern="[1-9][0-9]" maxLength="2"
+                    autoComplete="tel-area-code" value={participant.ddd} required placeholder="67"
+                    onChange={e=>changeParticipant('ddd',e.target.value.replace(/\\D/g,'').slice(0,2))} />
+                </label>
+                <label>Celular
+                  <input name="phone" type="tel" inputMode="numeric" pattern="[0-9]{8,9}" maxLength="9"
+                    autoComplete="tel-local" value={participant.phone} required placeholder="999999999"
+                    onChange={e=>changeParticipant('phone',e.target.value.replace(/\\D/g,'').slice(0,9))} />
+                </label>
+              </div>
+              <label>E-mail
+                <input name="email" type="email" autoComplete="email" maxLength="254" required
+                  value={participant.email} placeholder="exemplo@email.com"
+                  onChange={e=>changeParticipant('email',e.target.value)} />
+              </label>
+              <small className="guestPrivacy">Os dados são usados para identificar sua reserva e permitir o contato sobre a campanha. Eles não aparecem publicamente.</small>
+              {error&&<div className="error" role="alert">{error}</div>}
+              <button type="submit" disabled={busy||!selected.length} className="btn primary wide">
+                {busy?'Reservando…':'Reservar números sem cadastro'}
+              </button>
+            </form>
+            <div className="pix"><small>A chave Pix só será exibida depois de registrar a reserva.</small><span>A reserva dura até 5 minutos e não equivale a pagamento confirmado.</span></div>
+          </>}
         </div>
       </aside>
     </div>
