@@ -44,36 +44,50 @@ function drawQr(ctx,url,x,y,size){
   }
 }
 function drawGrid(ctx,statuses,quantity){
-  const paid=statusess=>statusess.filter(s=>s==='paid').length
-  const sold=paid(statuses), reserved=statuses.filter(s=>s==='reserved').length
-  const available=quantity-sold-reserved
+  // Esta arte pública NÃO diferencia pagamento confirmado de reserva.
+  const unavailable=statuses.filter(state=>state==='unavailable').length
+  const available=quantity-unavailable
   round(ctx,50,950,980,568,28,'#ffffff')
-  drawText(ctx,'QUAIS NÚMEROS ESTÃO LIVRES?',86,1012,880,'800 32px Arial',brand)
+  drawText(ctx,'STATUS DOS NÚMEROS',86,1007,870,'800 32px Arial',brand)
+  round(ctx,87,1029,32,27,7,'#eff5f3')
+  drawText(ctx,'Disponível (livre)',129,1051,360,'600 23px Arial','#244a43')
+  round(ctx,558,1029,32,27,7,'#f5c6c6')
+  drawText(ctx,'Indisponível',602,1051,340,'600 23px Arial','#6e3232')
+
   if(quantity<=160){
-    const cols=10,rows=Math.ceil(quantity/cols),gap=9,cellW=87,cellH=Math.min(39,(430-(rows-1)*gap)/rows)
-    const top=1044
+    const cols=10,rows=Math.ceil(quantity/cols)
+    const gapX=8,gapY=7,cellW=86
+    const cellH=Math.min(37,(390-(rows-1)*gapY)/rows)
+    const fontSize=Math.max(13,Math.min(19,cellH*.64))
+    const top=1088
+    const previousAlign=ctx.textAlign
+    ctx.textAlign='center'
     for(let i=0;i<quantity;i++){
-      const col=i%cols,row=Math.floor(i/cols),x=83+col*(cellW+gap),y=top+row*(cellH+gap)
-      const type=statuses[i],bg=type==='paid'?'#0f766e':type==='reserved'?'#f3c86b':'#eff5f3'
-      round(ctx,x,y,cellW,cellH,8,bg)
-      drawText(ctx,String(i+1).padStart(3,'0'),x+cellW/2-23,y+cellH*.71,50,'700 19px Arial',type==='paid'?'#fff':'#183b35')
+      const col=i%cols,row=Math.floor(i/cols)
+      const x=72+col*(cellW+gapX),y=top+row*(cellH+gapY)
+      const unavailableNumber=statuses[i]==='unavailable'
+      round(ctx,x,y,cellW,cellH,Math.min(8,cellH/3),unavailableNumber?'#f5c6c6':'#eff5f3')
+      drawText(ctx,String(i+1).padStart(3,'0'),x+cellW/2,y+cellH*.71,cellW-8,
+        '700 '+fontSize+'px Arial',unavailableNumber?'#6b3030':'#183b35')
     }
+    ctx.textAlign=previousAlign
   }else{
-    drawText(ctx,'Veja no site a grade completa e atualizada.',85,1084,905,'600 28px Arial','#425d55')
+    drawText(ctx,'Consulte a grade completa e atualizada na campanha.',86,1105,880,'600 25px Arial','#425d55')
     const groups=[
-      ['LIVRES',statuses.map((s,i)=>s==='available'?i+1:null).filter(Boolean),'#e9f4f0'],
-      ['CONFIRMADOS',statuses.map((s,i)=>s==='paid'?i+1:null).filter(Boolean),'#e0f0eb'],
-      ['RESERVADOS',statuses.map((s,i)=>s==='reserved'?i+1:null).filter(Boolean),'#fff1cf']
+      ['DISPONÍVEIS',statuses.map((state,i)=>state==='available'?i+1:null).filter(Boolean),'#e9f4f0'],
+      ['INDISPONÍVEIS',statuses.map((state,i)=>state==='unavailable'?i+1:null).filter(Boolean),'#fbe6e6']
     ]
-    for(let g=0;g<3;g++){
-      const [name,nums,bg]=groups[g],y=1110+g*125
-      round(ctx,75,y,930,108,14,bg)
-      drawText(ctx,name,94,y+33,830,'800 23px Arial',brand)
-      const text=nums.length?nums.slice(0,14).map(n=>String(n).padStart(3,'0')).join(' · ')+(nums.length>14?' · ...':''):'Nenhum'
-      drawText(ctx,text,94,y+77,860,'600 26px Arial','#213731')
+    for(let i=0;i<groups.length;i++){
+      const [name,numbers,background]=groups[i],y=1141+i*160
+      round(ctx,75,y,930,139,15,background)
+      drawText(ctx,name+' ('+numbers.length+')',95,y+40,840,'800 26px Arial',brand)
+      const preview=numbers.length?
+        numbers.slice(0,16).map(n=>String(n).padStart(3,'0')).join(' · ')+(numbers.length>16?' · ...':''):
+        'Nenhum'
+      drawText(ctx,preview,95,y+92,852,'600 24px Arial','#213731')
     }
   }
-  return {sold,reserved,available}
+  return {available,unavailable}
 }
 async function makeImage(campaign,statusRows){
   const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H
@@ -83,7 +97,8 @@ async function makeImage(campaign,statusRows){
   const lookup=new Map(statusRows.map(x=>[Number(x.number),x]))
   const statuses=Array.from({length:campaign.quantity},(_,i)=>{
     const row=lookup.get(i+1)
-    return row?.status==='paid'?'paid':row?.status==='reserved'&&Date.parse(row.reserved_until)>now?'reserved':'available'
+    return row?.status==='paid'||(row?.status==='reserved'&&Date.parse(row.reserved_until)>now)
+      ? 'unavailable' : 'available'
   })
   ctx.fillStyle='#f5fbf9';ctx.fillRect(0,0,W,H)
   round(ctx,0,0,W,330,0,brand)
@@ -97,12 +112,10 @@ async function makeImage(campaign,statusRows){
   round(ctx,50,840,980,98,21,'#e4f4ef')
   drawText(ctx,money(campaign.price)+' / NÚMERO',85,907,900,'800 43px Arial',brand)
   const totals=drawGrid(ctx,statuses,campaign.quantity)
-  round(ctx,55,1523,305,90,20,'#e2f3ee')
-  round(ctx,388,1523,305,90,20,'#f7ecd2')
-  round(ctx,720,1523,305,90,20,'#d2eee5')
-  drawText(ctx,totals.available+' LIVRES',80,1580,260,'800 28px Arial',brand)
-  drawText(ctx,totals.reserved+' RESERVADOS',407,1580,270,'800 25px Arial','#75571b')
-  drawText(ctx,totals.sold+' PAGOS',744,1580,260,'800 27px Arial',brand)
+  round(ctx,55,1523,472,90,20,'#e2f3ee')
+  round(ctx,548,1523,477,90,20,'#fbe6e6')
+  drawText(ctx,totals.available+' DISPONÍVEIS',79,1580,435,'800 32px Arial',brand)
+  drawText(ctx,totals.unavailable+' INDISPONÍVEIS',570,1580,430,'800 30px Arial','#a34646')
   round(ctx,44,1635,992,246,24,'#ffffff')
   drawQr(ctx,url,73,1650,210)
   drawText(ctx,'ESCANEIE PARA PARTICIPAR',305,1706,700,'800 32px Arial',brand)
@@ -154,7 +167,7 @@ export default function StatusShare({campaign}){
   }
   return <section className="statusShare">
     <h3>📲 Compartilhe os números no Status</h3>
-    <p>Gere uma imagem com números <b>disponíveis, reservados e pagos</b>, valor, QR Code e o endereço da campanha. Qualquer visitante pode compartilhar.</p>
+    <p>Gere uma imagem com números <b>disponíveis e indisponíveis</b>, sem revelar quais estão reservados ou pagos. Inclui valor, QR Code e endereço da campanha. Qualquer visitante pode compartilhar.</p>
     <button className="btn primary" type="button" onClick={create} disabled={working}>{working?'Gerando arte…':'Gerar imagem para Status'}</button>
     {preview&&<div className="statusSharePreview">
       <img src={preview} alt="Prévia da arte com números e QR Code para WhatsApp Status" />
