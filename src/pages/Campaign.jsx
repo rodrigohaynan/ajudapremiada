@@ -3,6 +3,8 @@ import { Link, useParams } from 'react-router-dom'
 import { dataService } from '../services/dataService'
 import { money } from '../components/CampaignCard'
 import { useAuth } from '../context/AuthContext'
+import ManualProofForm from '../components/ManualProofForm'
+import StatusShare from '../components/StatusShare'
 
 const dateBR = value => value ? new Intl.DateTimeFormat('pt-BR').format(new Date(`${value}T12:00:00`)) : 'Conforme regra'
 
@@ -16,6 +18,7 @@ export default function Campaign() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [shareStatus, setShareStatus] = useState('')
+  const [recoverError, setRecoverError] = useState('')
   const [participant,setParticipant] = useState({fullName:'',ddd:'',phone:'',email:''})
   const changeParticipant = (field,value) => setParticipant(prev=>({...prev,[field]:value}))
   useEffect(()=>{
@@ -32,6 +35,17 @@ export default function Campaign() {
       setC(item)
       if (item) dataService.listReservedNumbers(item.id).then(setReserved)
     }).catch(err=>setError(err.message||'Não foi possível carregar a campanha.'))
+  }, [slug])
+
+  useEffect(() => {
+    const params=new URLSearchParams(window.location.hash.slice(1))
+    const id=params.get('reserva'),token=params.get('token')
+    if(!id||!token)return
+    let active=true
+    dataService.getManualReservation(id,token)
+      .then(item=>{if(active)setPayment(item)})
+      .catch(err=>{if(active)setRecoverError(err.message||'Não foi possível recuperar a reserva.')})
+    return ()=>{active=false}
   }, [slug])
 
   useEffect(() => {
@@ -79,6 +93,10 @@ export default function Campaign() {
       setReserved(current=>[...new Set([...current,...chosen])])
       setSelected([])
       setPayment(result)
+      if(result.id && result.accessToken){
+        window.history.replaceState(null,'',window.location.pathname+window.location.search+
+          '#reserva='+encodeURIComponent(result.id)+'&token='+encodeURIComponent(result.accessToken))
+      }
     } catch(err) {
       const message=String(err.message||'Não foi possível registrar a reserva.')
       if(message.includes('disponível')||message.includes('NUMBER_UNAVAILABLE')) {
@@ -103,6 +121,7 @@ export default function Campaign() {
           </div>
           {shareStatus && <p role="status">{shareStatus}</p>}
         </div>
+        <StatusShare campaign={c}/>
         <div className="infoCards"><article><small>Valor por número</small><b>{money(c.price)}</b></article><article><small>Quantidade</small><b>{c.quantity}</b></article><article><small>Sorteio</small><b>{c.drawType === 'date' ? dateBR(c.drawDate) : 'Ao preencher'}</b></article></div>
         <article className="box"><h2>🎁 {c.prizes?.length > 1 ? 'Prêmios' : 'Prêmio'}</h2><ul>{c.prizes?.map((prize, i) => <li key={`${prize}-${i}`}><b>{i + 1}º</b> {prize}</li>)}</ul></article>
         <article className="box"><h2>♥ Sobre a causa</h2><p><b>{c.cause}</b></p><p>{c.customText}</p></article>
@@ -116,24 +135,18 @@ export default function Campaign() {
           <div className="numberGrid">{Array.from({ length: c.quantity }, (_, i) => i + 1).map(number => <button key={number} disabled={reserved.includes(number)} onClick={() => toggle(number)} className={selected.includes(number) ? 'sel' : ''}>{String(number).padStart(3, '0')}</button>)}</div>
           <div className="legend"><span>□ Disponível</span><span>■ Selecionado</span><span>▨ Reservado</span></div>
           <div className="total"><span>Total</span><b>{money(total)}</b></div>
-          {payment ? <div className="reservationConfirmed" role="status">
-            <h3>✓ Reserva registrada</h3>
-            <p>Seus números: <strong>{payment.numbers?.map(n=>String(n).padStart(3,'0')).join(', ')}</strong></p>
-            <p>Valor: <strong>{money(payment.amount)}</strong>. A reserva vale por 5 minutos, até {new Date(payment.expiresAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}.</p>
-            {payment.payment?.pixKey ?
-              <div className="pix"><b>Dados para o Pix</b><span>Chave: <strong>{payment.payment.pixKey}</strong></span><span>Titular: <strong>{payment.payment.pixHolder}</strong></span></div> :
-              <p>As instruções de pagamento não estão disponíveis neste momento. Entre em contato com o organizador.</p>}
-            <p className="paymentDisclaimer"><strong>Pagamento ainda não confirmado.</strong> A reserva, por si só, não confirma a participação definitiva no sorteio.</p>
-            {!user && <div className="registerInvite">
-              <h4>Quer acompanhar suas próximas participações?</h4>
-              <p>Você pode criar sua conta no Ajude e Ganhe, mas isso é opcional e não altera sua reserva atual.</p>
-              <Link className="btn primary" to="/entrar?mode=register">Criar conta gratuitamente (opcional)</Link>
-              <small>O cadastro posterior não vincula automaticamente esta reserva à sua conta.</small>
-            </div>}
-          </div> : <>
+          {recoverError&&<div className="error">{recoverError}</div>}
+          {payment ? <ManualProofForm reservation={payment} user={user}
+            onChange={setPayment}
+            onReset={()=>{
+              setPayment(null);setRecoverError('')
+              window.history.replaceState(null,'',window.location.pathname+window.location.search)
+              dataService.listReservedNumbers(c.id).then(setReserved).catch(()=>{})
+            }}/>
+          : <>
             <form className="guestParticipantForm" onSubmit={reserve}>
               <h3>Seus dados para participar</h3>
-              <p>Não é necessário criar uma conta ou senha. Identificaremos sua reserva pelos dados abaixo.</p>
+              <p>Sem criar conta ou senha. Informe seus dados para reservar os números.</p>
               <label>Nome completo
                 <input name="fullName" type="text" autoComplete="name" minLength="5" maxLength="120"
                   value={participant.fullName} required placeholder="Seu nome e sobrenome"
@@ -156,14 +169,16 @@ export default function Campaign() {
                   value={participant.email} placeholder="exemplo@email.com"
                   onChange={e=>changeParticipant('email',e.target.value)} />
               </label>
-              <small className="guestPrivacy">Os dados são usados para identificar sua reserva e permitir o contato sobre a campanha. Eles não aparecem publicamente.</small>
+              <small className="guestPrivacy">Dados privados, utilizados apenas para sua reserva e contato relacionado à campanha.</small>
               {error&&<div className="error" role="alert">{error}</div>}
               <button type="submit" disabled={busy||!selected.length} className="btn primary wide">
-                {busy?'Reservando…':'Reservar números sem cadastro'}
+                {busy?'Reservando…':'Reservar por 30 minutos sem cadastro'}
               </button>
             </form>
-            <div className="pix"><small>A chave Pix só será exibida depois de registrar a reserva.</small><span>A reserva dura até 5 minutos e não equivale a pagamento confirmado.</span></div>
-          </>}
+            <div className="pix"><small>Após reservar, você poderá enviar o comprovante de Pix.</small>
+              <span>Comprovantes enviados em até 30 minutos preservam os números por até 3 dias para conferência.</span>
+            </div>
+          </>
         </div>
       </aside>
     </div>
