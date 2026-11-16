@@ -118,3 +118,22 @@
 .authPasswordHint{font-size:11px;color:#677b76;line-height:1.5}
 .authBox .switch a{color:#0f766e;font-weight:700}
 @media(max-width:600px){.authBox input{font-size:16px}}
+
+
+/* Gerenciamento seguro da campanha e modo de consulta das arquivadas */
+.manageCampaign{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;background:#fff;border:1px solid #dbe6e2;border-radius:18px;padding:24px;margin:26px 0 56px}
+.manageCampaign>div:first-child{flex:1 1 320px;min-width:0}
+.manageCampaign h2{font:800 20px Manrope,sans-serif;margin:6px 0 9px}
+.manageCampaign p{font-size:13px;color:#4f6660;line-height:1.55;margin:0 0 9px}
+.manageCampaign small{display:block;font-size:11px;color:#647b74;line-height:1.5}
+.manageCampaign .error{flex-basis:100%}
+.btn.manageDelete{background:#b43d3d;color:#fff;min-height:44px}
+.btn.manageDelete:hover{background:#912b2b}
+.btn.manageArchive{background:#edf4f1;border:1px solid #b9d1c8;color:#255b4c;min-height:44px}
+.btn.manageArchive:hover{background:#d9e9e2}
+.archivedTag,.archivedNotice{background:#fff6e6;border:1px solid #e3cda0;color:#7d5717;font-size:12px;font-weight:700;padding:11px 13px;border-radius:10px;line-height:1.5}
+.archivedTag{margin-bottom:8px}
+.archivedNotice{margin:12px 0}
+.ownedArchived{opacity:.92}
+.archivedBuybox p{font-size:13px;line-height:1.7;color:#546a63}
+@media(max-width:600px){.manageCampaign{padding:17px}.manageCampaign>.btn{width:100%}}
