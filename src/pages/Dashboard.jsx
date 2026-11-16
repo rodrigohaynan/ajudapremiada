@@ -4,9 +4,11 @@ import { useAuth } from '../context/AuthContext'
 import { dataService } from '../services/dataService'
 import CampaignCard,{money} from '../components/CampaignCard'
 import MercadoPagoConnect from '../components/MercadoPagoConnect'
+import PaymentReview from '../components/PaymentReview'
 
 const statusLabel={
   pending_payment:'Aguardando pagamento',
+  proof_review:'Comprovante em análise',
   paid:'Pagamento confirmado',
   expired:'Reserva expirada',
   cancelled:'Cancelada',
@@ -28,7 +30,7 @@ export default function Dashboard(){
    <section className="dashHero"><div><span className="eyebrow light">MINHA CONTA</span><h1>Olá, {user.name?.split(' ')[0]} 👋</h1><p>Acompanhe suas ajudas e organize suas campanhas.</p></div><Link className="btn white" to="/criar">+ Nova campanha</Link></section>
    {error&&<div className="error">{error}</div>}
    <div className="tabs"><button className={tab==='parts'?'active':''} onClick={()=>setTab('parts')}>Minhas participações <b>{parts.length}</b></button><button className={tab==='owned'?'active':''} onClick={()=>setTab('owned')}>Minhas campanhas <b>{owned.length}</b></button></div>
-   {tab==='owned' && <MercadoPagoConnect user={user} />}
+   {tab==='owned' && <><MercadoPagoConnect user={user} /><PaymentReview /></>}
    {tab==='parts'
      ?<section className="list">{parts.map(p=><article className="participation" key={p.id}><span>♥</span><div><small>AJUDA REGISTRADA</small><h3>{p.campaign?.title||'Campanha'}</h3><p>Números: <b>{p.numbers.map(n=>String(n).padStart(3,'0')).join(', ')}</b></p></div><aside><i>{statusLabel[p.status]||p.status}</i><b>{money(p.amount)}</b>{p.campaign&&<Link to={`/campanha/${p.campaign.slug}`}>Abrir campanha →</Link>}</aside></article>)}{!parts.length&&<Empty text="Você ainda não participou de nenhuma campanha." link="/explorar" action="Explorar campanhas"/>}</section>
      :<section className="grid dashGrid">{owned.map(c=><div className="ownedCard" key={c.id}><CampaignCard campaign={c}/><div className="ownedActions"><Link className="btn primary" to={'/campanha/'+c.slug+'/editar'}>✎ Editar campanha</Link><Link className="btn ghost" to={'/campanha/'+c.slug}>Visualizar</Link></div></div>)}{!owned.length&&<Empty text="Você ainda não criou uma campanha." link="/criar" action="Criar minha primeira ajuda"/>}</section>}
