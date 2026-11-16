@@ -5,6 +5,7 @@ import Home from './pages/Home'
 import Explore from './pages/Explore'
 import Campaign from './pages/Campaign'
 import Auth from './pages/Auth'
+import ResetPassword from './pages/ResetPassword'
 import Create from './pages/Create'
 import Dashboard from './pages/Dashboard'
 import How from './pages/How'
@@ -27,6 +28,7 @@ export default function App(){
     <ScrollToTopOnNavigation/>
     <Routes>
     <Route path="/entrar" element={<Auth/>}/>
+    <Route path="/redefinir-senha" element={<ResetPassword/>}/>
     <Route element={<Layout/>}>
       <Route path="/" element={<Home/>}/>
       <Route path="/explorar" element={<Explore/>}/>
