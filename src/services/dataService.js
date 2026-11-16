@@ -41,6 +41,8 @@ const localService={
   write(K.campaigns,all.map(item=>item.id===id?{...item,status:'archived',archivedAt:new Date().toISOString()}:item))
   return {action:'archived'}
  },
+ async getParticipationContactStatus(){return {configured:true,emailVerified:true}},
+ async setParticipationContactPhone(){return {ok:true}},
  async listParticipations(userId){return read(K.parts,[]).filter(p=>p.userId===userId)},
  async listOwnedCampaigns(userId){return (await this.listCampaigns()).filter(c=>c.ownerId===userId)},
  async listReservedNumbers(campaignId){return read(K.parts,[]).filter(p=>p.campaignId===campaignId).flatMap(p=>p.numbers)}
@@ -322,17 +324,48 @@ const supabaseService={
   if(error||!data?.ok)throw Error(data?.error||'Não foi possível confirmar o pagamento.')
   return data
  },
+ async getParticipationContactStatus(){
+  const {data,error}=await supabase.rpc('my_participation_contact_status')
+  if(error)throw new Error('Não foi possível consultar seus dados de participação.')
+  return data||{configured:false,emailVerified:false}
+ },
+ async setParticipationContactPhone(phone){
+  const digits=String(phone||'').replace(/\D/g,'')
+  if(!/^[1-9][0-9]9[0-9]{8}$/.test(digits))
+    throw new Error('Informe um celular válido com DDD.')
+  const {data,error}=await supabase.rpc('set_my_participation_phone',{p_phone:digits})
+  if(error) {
+    const msg=String(error.message||'')
+    if(msg.includes('VERIFIED_LOGIN_REQUIRED'))throw new Error('Confirme seu e-mail antes de vincular participações.')
+    if(msg.includes('PHONE_ALREADY_REGISTERED'))throw new Error('O celular já está registrado em sua conta.')
+    throw new Error('Não foi possível salvar seu celular. Tente novamente.')
+  }
+  return data
+ },
  async listParticipations(userId){
-  const {data,error}=await supabase.from('participations')
-    .select('*, participation_numbers(number), campaigns(title,slug)')
-    .eq('user_id',userId).order('created_at',{ascending:false})
-  if(error) throw error
-  return (data||[]).map(p=>({
+  const [direct,guest]=await Promise.all([
+    supabase.from('participations')
+      .select('*, participation_numbers(number), campaigns(title,slug)')
+      .eq('user_id',userId).order('created_at',{ascending:false}),
+    supabase.rpc('my_guest_participations')
+  ])
+  if(direct.error)throw direct.error
+  if(guest.error)throw new Error('Não foi possível identificar suas participações sem login.')
+  const linked=(direct.data||[]).map(p=>({
     id:p.id,campaignId:p.campaign_id,userId:p.user_id,amount:Number(p.amount),
     status:p.status,createdAt:p.created_at,expiresAt:p.expires_at,
     numbers:(p.participation_numbers||[]).map(x=>x.number).sort((a,b)=>a-b),
     campaign:p.campaigns
   }))
+  const byId=new Map(linked.map(item=>[item.id,item]))
+  for(const item of Array.isArray(guest.data)?guest.data:[]){
+    if(!byId.has(item.id))byId.set(item.id,{
+      ...item,amount:Number(item.amount),
+      numbers:(item.numbers||[]).map(Number).sort((a,b)=>a-b)
+    })
+  }
+  return [...byId.values()].sort((a,b)=>
+    new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime())
  },
  async listOwnedCampaigns(userId){
   const {data,error}=await supabase.from('campaigns').select(campaignSelect).eq('owner_id',userId).order('created_at',{ascending:false})
