@@ -143,12 +143,12 @@ export default function Campaign() {
                 <label>DDD
                   <input name="ddd" type="tel" inputMode="numeric" pattern="[1-9][0-9]" maxLength="2"
                     autoComplete="tel-area-code" value={participant.ddd} required placeholder="67"
-                    onChange={e=>changeParticipant('ddd',e.target.value.replace(/\\D/g,'').slice(0,2))} />
+                    onChange={e=>changeParticipant('ddd',e.target.value.replace(/\D/g,'').slice(0,2))} />
                 </label>
                 <label>Celular
                   <input name="phone" type="tel" inputMode="numeric" pattern="[0-9]{8,9}" maxLength="9"
                     autoComplete="tel-local" value={participant.phone} required placeholder="999999999"
-                    onChange={e=>changeParticipant('phone',e.target.value.replace(/\\D/g,'').slice(0,9))} />
+                    onChange={e=>changeParticipant('phone',e.target.value.replace(/\D/g,'').slice(0,9))} />
                 </label>
               </div>
               <label>E-mail
