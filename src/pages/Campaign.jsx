@@ -178,7 +178,7 @@ export default function Campaign() {
             <div className="pix"><small>Após reservar, você poderá enviar o comprovante de Pix.</small>
               <span>Comprovantes enviados em até 30 minutos preservam os números por até 3 dias para conferência.</span>
             </div>
-          </>
+          </>}
         </div>
       </aside>
     </div>
