@@ -86,6 +86,25 @@ async function uploadCover(dataUrl,userId){
   return supabase.storage.from('campaign-covers').getPublicUrl(path).data.publicUrl
 }
 
+async function fetchAllNumberRows(campaignId, onlyOccupied=false){
+  const items=[]
+  let offset=0
+  for(;;){
+    let query=supabase.from('campaign_numbers')
+      .select('number,status,reserved_until')
+      .eq('campaign_id',campaignId)
+      .order('number')
+      .range(offset,offset+999)
+    if(onlyOccupied)query=query.neq('status','available')
+    const {data,error}=await query
+    if(error)throw error
+    items.push(...(data||[]))
+    if(!data||data.length<1000)break
+    offset+=1000
+  }
+  return items
+}
+
 const supabaseService={
  async listCampaigns(){
   const { data,error }=await supabase.from('campaigns').select(campaignSelect).eq('status','active').order('created_at',{ascending:false})
@@ -211,10 +230,7 @@ const supabaseService={
   return data
  },
  async listNumberStatuses(campaignId){
-  const {data,error}=await supabase.from('campaign_numbers')
-    .select('number,status,reserved_until').eq('campaign_id',campaignId).order('number')
-  if(error) throw error
-  return data||[]
+  return fetchAllNumberRows(campaignId)
  },
  async getManualReservation(id,accessToken){
   const {data,error}=await supabase.functions.invoke('manual-payment-proof',{
@@ -271,13 +287,9 @@ const supabaseService={
   return enrichCampaigns(data)
  },
  async listReservedNumbers(campaignId){
-  const {data,error}=await supabase.from('campaign_numbers')
-    .select('number,status,reserved_until')
-    .eq('campaign_id',campaignId)
-    .neq('status','available')
-  if(error) throw error
+  const data=await fetchAllNumberRows(campaignId,true)
   const now=Date.now()
-  return (data||[]).filter(x=>x.status==='paid'||(x.status==='reserved'&&x.reserved_until&&new Date(x.reserved_until).getTime()>now)).map(x=>x.number)
+  return data.filter(x=>x.status==='paid'||(x.status==='reserved'&&x.reserved_until&&new Date(x.reserved_until).getTime()>now)).map(x=>x.number)
  }
 }
 
