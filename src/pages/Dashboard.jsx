@@ -17,7 +17,7 @@ const statusLabel={
 
 export default function Dashboard(){
  const {user,loading}=useAuth()
- const [tab,setTab]=useState('parts'),[parts,setParts]=useState([]),[owned,setOwned]=useState([]),[error,setError]=useState('')
+ const [tab,setTab]=useState(()=>new URLSearchParams(window.location.search).get('tab')==='owned'?'owned':'parts'),[parts,setParts]=useState([]),[owned,setOwned]=useState([]),[error,setError]=useState('')
  useEffect(()=>{
    if(!user)return
    Promise.all([dataService.listParticipations(user.id),dataService.listOwnedCampaigns(user.id)])
@@ -33,7 +33,16 @@ export default function Dashboard(){
    {tab==='owned' && <><MercadoPagoConnect user={user} /><PaymentReview /></>}
    {tab==='parts'
      ?<section className="list">{parts.map(p=><article className="participation" key={p.id}><span>♥</span><div><small>AJUDA REGISTRADA</small><h3>{p.campaign?.title||'Campanha'}</h3><p>Números: <b>{p.numbers.map(n=>String(n).padStart(3,'0')).join(', ')}</b></p></div><aside><i>{statusLabel[p.status]||p.status}</i><b>{money(p.amount)}</b>{p.campaign&&<Link to={`/campanha/${p.campaign.slug}`}>Abrir campanha →</Link>}</aside></article>)}{!parts.length&&<Empty text="Você ainda não participou de nenhuma campanha." link="/explorar" action="Explorar campanhas"/>}</section>
-     :<section className="grid dashGrid">{owned.map(c=><div className="ownedCard" key={c.id}><CampaignCard campaign={c}/><div className="ownedActions"><Link className="btn primary" to={'/campanha/'+c.slug+'/editar'}>✎ Editar campanha</Link><Link className="btn ghost" to={'/campanha/'+c.slug}>Visualizar</Link></div></div>)}{!owned.length&&<Empty text="Você ainda não criou uma campanha." link="/criar" action="Criar minha primeira ajuda"/>}</section>}
+     :<section className="grid dashGrid">{owned.map(c=><div className={'ownedCard '+(c.status==='archived'?'ownedArchived':'')} key={c.id}>
+      {c.status==='archived'&&<div className="archivedTag">📁 Arquivada — somente consulta</div>}
+      <CampaignCard campaign={c}/>
+      <div className="ownedActions">
+        {c.status==='archived'
+          ? <Link className="btn ghost" to={'/campanha/'+c.slug}>Consultar histórico</Link>
+          : <><Link className="btn primary" to={'/campanha/'+c.slug+'/editar'}>✎ Editar / gerenciar</Link>
+              <Link className="btn ghost" to={'/campanha/'+c.slug}>Visualizar</Link></>}
+      </div>
+    </div>)}{!owned.length&&<Empty text="Você ainda não criou uma campanha." link="/criar" action="Criar minha primeira ajuda"/>}</section>}
  </div></main>
 }
 function Empty({text,link,action}){return <div className="empty span"><b>♥</b><h2>{text}</h2><Link className="btn primary" to={link}>{action}</Link></div>}
