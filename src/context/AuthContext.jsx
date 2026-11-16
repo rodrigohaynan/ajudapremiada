@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { isValidCpf, isValidMobile, onlyDigits } from '../utils/registration'
 
 const C=createContext(null)
 const PUBLIC_SITE_URL='https://ajudeeganhe.com.br'
@@ -39,18 +40,30 @@ export function AuthProvider({children}){
    return u
  }
 
- const register=async({name,email,password})=>{
+ const register=async({name,email,cpf,phone,password})=>{
    if(!supabase) throw new Error('Supabase não está configurado.')
+   const fullName=String(name||'').trim().replace(/\s+/g,' ')
+   const cpfDigits=onlyDigits(cpf)
+   const phoneDigits=onlyDigits(phone)
+   if(fullName.length<3 || !fullName.includes(' '))throw new Error('Informe seu nome e sobrenome.')
+   if(!isValidCpf(cpfDigits))throw new Error('O CPF informado é inválido.')
+   if(!isValidMobile(phoneDigits))throw new Error('Informe um celular válido com DDD.')
+   if(String(password||'').length<8)throw new Error('A senha deve ter pelo menos 8 caracteres.')
    const emailRedirectTo=PUBLIC_SITE_URL+'/painel'
    const {data,error}=await supabase.auth.signUp({
-     email,
+     email:String(email||'').trim().toLowerCase(),
      password,
      options:{
-       data:{full_name:name},
+       data:{full_name:fullName,cpf:cpfDigits,phone:phoneDigits},
        emailRedirectTo
      }
    })
-   if(error) throw error
+   if(error) {
+     if(/database error/i.test(error.message||'')) {
+       throw new Error('Não foi possível concluir o cadastro. Verifique seus dados ou utilize outro e-mail.')
+     }
+     throw error
+   }
    const u=data.session?await shapeUser(data.user):null
    if(u)setUser(u)
    return {user:u,needsConfirmation:!data.session}
