@@ -20,6 +20,27 @@ const localService={
   write(K.campaigns,all.map(c=>c.id===id?item:c))
   return item
  },
+ async getCampaignLifecycle(id){
+  const c=(await this.listCampaigns()).find(item=>item.id===id)
+  if(!c)throw new Error('Campanha não encontrada.')
+  const count=read(K.parts,[]).filter(item=>item.campaignId===id).length
+  return {canDelete:count===0&&['draft','active','paused'].includes(c.status||'active'),
+    participations:count,occupiedNumbers:count,status:c.status||'active'}
+ },
+ async manageCampaignLifecycle(id,action,user){
+  const all=await this.listCampaigns()
+  const campaign=all.find(item=>item.id===id&&item.ownerId===user?.id)
+  if(!campaign)throw new Error('Somente o organizador pode gerenciar esta campanha.')
+  const lifecycle=await this.getCampaignLifecycle(id)
+  if(action==='delete'){
+    if(!lifecycle.canDelete)throw new Error('Esta campanha já tem participações. Arquive em vez de excluir.')
+    write(K.campaigns,all.filter(item=>item.id!==id))
+    return {action:'deleted'}
+  }
+  if(action!=='archive')throw new Error('Ação inválida.')
+  write(K.campaigns,all.map(item=>item.id===id?{...item,status:'archived',archivedAt:new Date().toISOString()}:item))
+  return {action:'archived'}
+ },
  async listParticipations(userId){return read(K.parts,[]).filter(p=>p.userId===userId)},
  async listOwnedCampaigns(userId){return (await this.listCampaigns()).filter(c=>c.ownerId===userId)},
  async listReservedNumbers(campaignId){return read(K.parts,[]).filter(p=>p.campaignId===campaignId).flatMap(p=>p.numbers)}
@@ -189,6 +210,27 @@ const supabaseService={
   })))
   if(added.error)throw added.error
   return this.getCampaign(data.slug)
+ },
+ async getCampaignLifecycle(id){
+  const {data,error}=await supabase.rpc('get_campaign_lifecycle',{p_campaign_id:id})
+  if(error)throw new Error('Não foi possível consultar o histórico da campanha.')
+  if(!data)throw new Error('Esta campanha não está disponível para gerenciamento.')
+  return data
+ },
+ async manageCampaignLifecycle(id,action,user){
+  if(!user?.id)throw new Error('Entre na sua conta para continuar.')
+  const {data,error}=await supabase.rpc('manage_campaign_lifecycle',{
+    p_campaign_id:id,p_action:action
+  })
+  if(error){
+    const code=String(error.message||'')
+    if(code.includes('DELETE_NOT_ALLOWED_ARCHIVE_INSTEAD'))
+      throw new Error('Esta campanha já tem histórico. Utilize Arquivar para preservar os registros.')
+    if(code.includes('ONLY_OWNER_CAN_MANAGE')||code.includes('AUTH_REQUIRED'))
+      throw new Error('Apenas o organizador pode gerenciar esta campanha.')
+    throw new Error('Não foi possível concluir a operação. Atualize a página e tente novamente.')
+  }
+  return data
  },
  async reserveNumbers({campaignId,numbers}){
   const {data,error}=await supabase.rpc('reserve_campaign_numbers',{p_campaign_id:campaignId,p_numbers:numbers})
