@@ -55,11 +55,28 @@ export function AuthProvider({children}){
    return {user:u,needsConfirmation:!data.session}
  }
 
+ const requestPasswordReset=async email=>{
+   if(!supabase)throw new Error('Supabase não está configurado.')
+   const normalized=String(email||'').trim().toLowerCase()
+   if(!normalized)throw new Error('Informe seu e-mail para recuperar a senha.')
+   const redirectTo=window.location.origin+'/redefinir-senha'
+   const {error}=await supabase.auth.resetPasswordForEmail(normalized,{redirectTo})
+   if(error)throw error
+ }
+
+ const changePassword=async password=>{
+   if(!supabase)throw new Error('Supabase não está configurado.')
+   const {error}=await supabase.auth.updateUser({password})
+   if(error)throw error
+   await supabase.auth.signOut()
+   setUser(null)
+ }
+
  const logout=async()=>{
    if(supabase) await supabase.auth.signOut()
    setUser(null)
  }
 
- return <C.Provider value={useMemo(()=>({user,loading,login,register,logout}),[user,loading])}>{children}</C.Provider>
+ return <C.Provider value={useMemo(()=>({user,loading,login,register,logout,requestPasswordReset,changePassword}),[user,loading])}>{children}</C.Provider>
 }
 export const useAuth=()=>useContext(C)
