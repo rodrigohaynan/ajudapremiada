@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 const C=createContext(null)
+const PUBLIC_SITE_URL='https://ajudeeganhe.com.br'
 
 const shapeUser=async authUser=>{
   if(!authUser) return null
@@ -40,7 +41,7 @@ export function AuthProvider({children}){
 
  const register=async({name,email,password})=>{
    if(!supabase) throw new Error('Supabase não está configurado.')
-   const emailRedirectTo='https://ajude-e-ganhe.netlify.app/painel'
+   const emailRedirectTo=PUBLIC_SITE_URL+'/painel'
    const {data,error}=await supabase.auth.signUp({
      email,
      password,
@@ -59,7 +60,7 @@ export function AuthProvider({children}){
    if(!supabase)throw new Error('Supabase não está configurado.')
    const normalized=String(email||'').trim().toLowerCase()
    if(!normalized)throw new Error('Informe seu e-mail para recuperar a senha.')
-   const redirectTo=window.location.origin+'/redefinir-senha'
+   const redirectTo=PUBLIC_SITE_URL+'/redefinir-senha'
    const {error}=await supabase.auth.resetPasswordForEmail(normalized,{redirectTo})
    if(error)throw error
  }
