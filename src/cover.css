@@ -63,3 +63,41 @@
 .registerInvite .btn{margin:7px 0 10px;display:inline-flex;align-items:center;justify-content:center}
 .registerInvite small{display:block;font-size:10px;line-height:1.5;color:#71827e}
 @media(max-width:480px){.guestParticipantForm input{font-size:16px}.guestPhoneRow{grid-template-columns:70px minmax(0,1fr)}.registerInvite .btn{width:100%}}
+
+
+/* Arte de Status, QR code e envio manual de comprovante */
+.statusShare{border:1px solid #d3e5df;border-radius:18px;padding:24px;margin:20px 0;background:#f7fbfa}
+.statusShare h3{margin:0 0 8px;color:#0f766e;font-size:19px}
+.statusShare p{color:#4d625b;font-size:13px;line-height:1.6}
+.statusShare small{color:#647972;font-size:11px;line-height:1.55;display:block;margin-top:10px}
+.statusShare .btn{margin:6px 6px 6px 0}
+.statusSharePreview{display:grid;grid-template-columns:minmax(0,210px) 1fr;gap:15px;margin-top:16px;align-items:start}
+.statusSharePreview img{display:block;width:100%;max-width:210px;aspect-ratio:9/16;object-fit:contain;box-shadow:0 6px 22px #073c331c;border-radius:12px;background:#fff}
+.statusShareActions{display:flex;flex-direction:column;gap:6px}
+.statusNotice{background:#e5f5ee;border-radius:8px;padding:10px;color:#246a56}
+.manualProofUpload{display:flex;flex-direction:column;gap:10px;margin:18px 0;border-top:1px solid #d4e7de;padding-top:14px}
+.manualProofUpload label{display:flex;flex-direction:column;gap:8px;font-weight:700;font-size:13px}
+.manualProofUpload input{display:block;width:100%;box-sizing:border-box;padding:11px;background:#fff;border:1px solid #bcd4cb;border-radius:10px;font-size:12px}
+.manualProofUpload small{font-size:11px;color:#5c7069;line-height:1.5}
+.manualProofActions,.paymentReviewButtons{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+.manualProofActions .btn,.paymentReviewButtons .btn{font-size:12px}
+.manualNewReservation{border:0;background:none;color:#0f766e;font-size:12px;font-weight:700;text-decoration:underline;cursor:pointer;padding:9px 0}
+.paymentReview{background:#fff;border:1px solid #d5e5e0;padding:22px;border-radius:18px;margin:25px 0}
+.paymentReviewTop{display:flex;justify-content:space-between;align-items:start;gap:15px}
+.paymentReviewTop h2{font:800 19px Manrope,sans-serif;margin:0 0 6px}
+.paymentReviewTop p,.paymentEmpty{font-size:12px;color:#647873;margin:6px 0}
+.paymentReviewGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:14px}
+.paymentReviewCard{border:1px solid #d3e4df;border-radius:12px;padding:15px;background:#f7fbfa;min-width:0}
+.paymentReviewCard h3{margin:7px 0;font-size:18px;overflow-wrap:anywhere}
+.paymentReviewCard p{font-size:12px;overflow-wrap:anywhere;line-height:1.6;color:#39544c}
+.paymentReviewCard small{color:#0f766e;font-weight:700}
+.paymentReviewCard a{display:inline-flex}
+@media(max-width:550px){
+ .statusShare{padding:15px}
+ .statusSharePreview{grid-template-columns:1fr}
+ .statusSharePreview img{max-width:220px;margin:auto}
+ .statusShareActions{align-items:stretch}
+ .statusShareActions .btn{margin:0 0 7px}
+ .paymentReview{padding:15px}
+ .paymentReviewTop{flex-direction:column}
+}
