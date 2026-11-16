@@ -44,6 +44,9 @@ export default function Create() {
   const [selectedFile, setSelectedFile] = useState(null)
   const [loadingCampaign, setLoadingCampaign] = useState(isEdit)
   const [ownedCampaign, setOwnedCampaign] = useState(null)
+  const [lifecycle, setLifecycle] = useState(null)
+  const [manageBusy, setManageBusy] = useState(false)
+  const [manageError, setManageError] = useState('')
 
   useEffect(() => {
     if (!isEdit || !user) return
@@ -51,9 +54,12 @@ export default function Create() {
     setLoadingCampaign(true)
     dataService.getCampaign(slug).then(async item => {
       if (!item || item.ownerId !== user.id) throw new Error('Você não tem permissão para editar esta campanha.')
-      const payment = await dataService.getPaymentSettings(item.id)
+      const [payment, lifecycleStatus] = await Promise.all([
+        dataService.getPaymentSettings(item.id),dataService.getCampaignLifecycle(item.id)
+      ])
       if (!active) return
       setOwnedCampaign(item)
+      setLifecycle(lifecycleStatus)
       setPrizes(item.prizes?.length ? item.prizes : [''])
       setForm({
         title: item.title || '', category: item.category || 'Solidariedade',
@@ -79,6 +85,16 @@ export default function Create() {
 
   if (isEdit && !ownedCampaign) {
     return <main className="shell page"><div className="empty"><h2>{error || 'Campanha não encontrada.'}</h2><Link to="/painel">Voltar ao painel</Link></div></main>
+  }
+
+  if (isEdit && ownedCampaign?.status === 'archived') {
+    return <main className="shell page">
+      <div className="empty"><b>📁</b><h1>Campanha arquivada</h1>
+        <p>Ela não recebe novas participações. Os registros e comprovantes anteriores foram preservados.</p>
+        <Link className="btn primary" to={'/campanha/'+ownedCampaign.slug}>Consultar campanha</Link>
+        <Link className="btn ghost" to="/painel?tab=owned">Voltar às minhas campanhas</Link>
+      </div>
+    </main>
   }
 
   const u = (key, value) => setForm(current => ({ ...current, [key]: value }))
@@ -149,6 +165,28 @@ export default function Create() {
       setError(err.message || (isEdit ? 'Não foi possível salvar as alterações.' : 'Não foi possível publicar a campanha.'))
     } finally {
       setPublishing(false)
+    }
+  }
+
+  const manageCampaign = async action => {
+    if (!isEdit || !ownedCampaign || !lifecycle || manageBusy) return
+    setManageError('')
+    if (action==='delete') {
+      if (!lifecycle.canDelete) return setManageError('Esta campanha possui histórico. Arquive em vez de excluir.')
+      if (!window.confirm('Excluir DEFINITIVAMENTE esta campanha sem participações? Esta ação não pode ser desfeita.')) return
+      const typed=window.prompt('Para confirmar a exclusão, digite EXCLUIR:')
+      if (typed?.trim().toUpperCase() !== 'EXCLUIR') return
+    } else {
+      if (!window.confirm('Arquivar esta campanha? Ela deixará de aceitar novos números, mas as reservas, comprovantes e o histórico permanecerão preservados.')) return
+    }
+    setManageBusy(true)
+    try {
+      await dataService.manageCampaignLifecycle(ownedCampaign.id,action,user)
+      nav('/painel?tab=owned',{replace:true})
+    } catch(err) {
+      setManageError(err.message||'Não foi possível concluir a operação.')
+    } finally {
+      setManageBusy(false)
     }
   }
 
@@ -237,5 +275,24 @@ export default function Create() {
         <small>{form.quantity} números no lançamento</small>
       </aside>
     </div>
+
+    {isEdit && <section className="manageCampaign" aria-label="Gerenciar campanha">
+      <div>
+        <span className="eyebrow">GERENCIAMENTO</span>
+        <h2>Gerenciar esta campanha</h2>
+        {lifecycle?.canDelete ? <>
+          <p>Nenhuma participação foi registrada. É possível excluir definitivamente esta campanha.</p>
+          <small>A exclusão apaga a campanha, os números e seus dados de configuração. Não poderá ser desfeita.</small>
+        </> : <>
+          <p>Esta campanha já possui histórico ou foi encerrada. Para preservar a identificação dos participantes, reservas e comprovantes, utilize o arquivamento.</p>
+          <small>{lifecycle?.participations||0} participação(ões) registrada(s). Campanhas arquivadas deixam de receber novos números, mas mantêm o link para consulta e acompanhamento de reservas já realizadas.</small>
+        </>}
+      </div>
+      {lifecycle && <button type="button" disabled={manageBusy||publishing} className={'btn '+(lifecycle.canDelete?'manageDelete':'manageArchive')}
+        onClick={()=>manageCampaign(lifecycle.canDelete?'delete':'archive')}>
+        {manageBusy?'Processando…':lifecycle.canDelete?'Excluir campanha definitivamente':'Arquivar campanha'}
+      </button>}
+      {manageError && <div className="error" role="alert">{manageError}</div>}
+    </section>}
   </div></main>
 }
