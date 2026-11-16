@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Logo } from '../components/Layout'
+import { formatCpf, formatMobile, isValidCpf, isValidMobile } from '../utils/registration'
 
 export default function Auth() {
   const { login, register, requestPasswordReset } = useAuth()
@@ -11,8 +12,11 @@ export default function Auth() {
     return selected === 'register' ? 'register' : selected === 'forgot' ? 'forgot' : 'login'
   })
   const [name, setName] = useState('')
+  const [cpf, setCpf] = useState('')
+  const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
@@ -22,6 +26,7 @@ export default function Auth() {
     setError('')
     setNotice('')
     setPassword('')
+    setConfirmPassword('')
   }
 
   const submit = async event => {
@@ -35,7 +40,12 @@ export default function Auth() {
         await login({ email: email.trim(), password })
         navigate('/painel')
       } else if (mode === 'register') {
-        const result = await register({ name, email: email.trim(), password })
+        if (!name.trim().includes(' ')) throw new Error('Informe seu nome completo.')
+        if (!isValidCpf(cpf)) throw new Error('CPF inválido. Confira os números digitados.')
+        if (!isValidMobile(phone)) throw new Error('Informe um celular válido com DDD (11 dígitos).')
+        if (password.length < 8) throw new Error('A senha deve ter pelo menos 8 caracteres.')
+        if (password !== confirmPassword) throw new Error('As senhas não coincidem. Digite novamente.')
+        const result = await register({ name, email: email.trim(), cpf, phone, password })
         if (result.needsConfirmation) {
           setNotice('Conta criada. Confirme seu e-mail para entrar no Ajude e Ganhe.')
         } else {
@@ -76,16 +86,37 @@ export default function Auth() {
           : mode === 'login' ? 'Acesse suas participações e campanhas.'
           : 'Participe, acompanhe e crie suas próprias campanhas.'}</p>
         <form onSubmit={submit}>
-          {mode === 'register' && <label>Nome completo
-            <input autoComplete="name" required value={name} onChange={event => setName(event.target.value)}/>
-          </label>}
+          {mode === 'register' && <>
+            <label>Nome completo
+              <input autoComplete="name" minLength={3} maxLength={120} required
+                value={name} onChange={event => setName(event.target.value)} placeholder="Nome e sobrenome"/>
+            </label>
+            <label>CPF
+              <input type="text" inputMode="numeric" autoComplete="off" maxLength={14}
+                required value={cpf} onChange={event => setCpf(formatCpf(event.target.value))}
+                placeholder="000.000.000-00"/>
+            </label>
+            <label>Celular com DDD
+              <input type="tel" inputMode="tel" autoComplete="tel-national" maxLength={15}
+                required value={phone} onChange={event => setPhone(formatMobile(event.target.value))}
+                placeholder="(67) 99999-9999"/>
+            </label>
+          </>}
           <label>E-mail
             <input type="email" autoComplete="email" required value={email} onChange={event => setEmail(event.target.value)} placeholder="seuemail@exemplo.com"/>
           </label>
           {mode !== 'forgot' && <label>Senha
             <input type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-              minLength="6" required value={password} onChange={event => setPassword(event.target.value)}/>
+              minLength={mode === 'register' ? 8 : 6} required value={password}
+              onChange={event => setPassword(event.target.value)}/>
           </label>}
+          {mode === 'register' && <>
+            <label>Confirmar senha
+              <input type="password" autoComplete="new-password" minLength={8} required
+                value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)}/>
+            </label>
+            <small className="authRegistrationHint">A senha precisa ter no mínimo 8 caracteres. CPF e celular são utilizados para identificação e contato e não aparecem publicamente.</small>
+          </>}
           {mode === 'login' && <div className="authForgot">
             <button type="button" onClick={() => changeMode('forgot')}>Esqueci minha senha</button>
           </div>}
