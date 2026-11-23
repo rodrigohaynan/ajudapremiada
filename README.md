@@ -9,12 +9,13 @@ MVP front-end para criação, descoberta e acompanhamento de campanhas com causa
 - Página pública da campanha
 - Grade de números disponíveis, selecionados e preenchidos
 - Registro de participação e instrução de Pix
-- Login/cadastro local para prototipação
+- Cadastro, login e recuperação de senha com Supabase Auth
+- Reserva de números sem cadastro, envio de comprovante Pix e conferência pelo organizador
+- Arte para Status do WhatsApp e miniatura de compartilhamento (edge function `campaign-og`)
 - Área do usuário com participações e campanhas criadas
 - Assistente de criação em 4 etapas
 - Definição de prêmio, quantidade de números, valor, cidade, regra/data de sorteio, Pix e textos personalizados
-- Persistência local via `localStorage`
-- Camada `dataService` preparada para substituição por Supabase
+- Dados no Supabase (Postgres, Storage e Edge Functions); sem as variáveis `VITE_SUPABASE_*`, usa `localStorage` para prototipação
 - Configuração SPA pronta para Netlify
 
 ## Rodando localmente
@@ -37,6 +38,18 @@ O `netlify.toml` já contém:
 - `npm run build`
 - publicação da pasta `dist`
 - redirect de SPA para `index.html`
+
+## Funções do Supabase
+
+As funções em `supabase/functions` não são publicadas pelo Netlify. Após alterá-las, publique com a CLI do Supabase:
+
+```bash
+supabase functions deploy guest-reserve-numbers
+supabase functions deploy manual-payment-proof
+supabase functions deploy mercado-pago-oauth
+```
+
+O domínio oficial é `https://ajudeeganhe.com.br` (definido em `src/config.js` e nas listas de origens das funções).
 
 ## Preparação para Supabase
 

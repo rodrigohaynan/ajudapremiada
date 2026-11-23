@@ -5,7 +5,9 @@ import { money } from '../components/CampaignCard'
 import { useAuth } from '../context/AuthContext'
 import ManualProofForm from '../components/ManualProofForm'
 import StatusShare from '../components/StatusShare'
+import { campaignUrl } from '../config'
 
+const MAX_NUMBERS_PER_RESERVATION = 100
 const dateBR = value => value ? new Intl.DateTimeFormat('pt-BR').format(new Date(`${value}T12:00:00`)) : 'Conforme regra'
 
 export default function Campaign() {
@@ -33,7 +35,7 @@ export default function Campaign() {
   useEffect(() => {
     dataService.getCampaign(slug).then(item => {
       setC(item)
-      if (item) dataService.listReservedNumbers(item.id).then(setReserved)
+      if (item) return dataService.listReservedNumbers(item.id).then(setReserved)
     }).catch(err=>setError(err.message||'Não foi possível carregar a campanha.'))
   }, [slug])
 
@@ -56,17 +58,23 @@ export default function Campaign() {
   }, [c])
 
   const total = useMemo(() => selected.length * (c?.price || 0), [selected, c])
+  const reservedSet = useMemo(() => new Set(reserved), [reserved])
+  const selectedSet = useMemo(() => new Set(selected), [selected])
 
   if (!c) return <main className="shell page"><div className="empty"><b>{error?'!':'…'}</b><h2>{error||'Carregando campanha'}</h2></div></main>
 
   const toggle = number => {
-    if (reserved.includes(number)) return
+    if (reservedSet.has(number)) return
+    if (!selectedSet.has(number) && selected.length >= MAX_NUMBERS_PER_RESERVATION) {
+      setError(`Selecione no máximo ${MAX_NUMBERS_PER_RESERVATION} números por reserva.`)
+      return
+    }
+    setError('')
     setSelected(current => current.includes(number) ? current.filter(x => x !== number) : [...current, number])
   }
 
   const shareCampaign = async () => {
-    const url = window.location.origin + '/campanha/' + encodeURIComponent(c.slug) +
-      '?v=' + encodeURIComponent(c.updatedAt || c.createdAt || '')
+    const url = campaignUrl(c.slug) + '?v=' + encodeURIComponent(c.updatedAt || c.createdAt || '')
     const shareData = { title: c.title, text: c.cause || c.description, url }
     setShareStatus('')
     try {
@@ -141,7 +149,7 @@ export default function Campaign() {
         : <div className="buybox">
           <span className="eyebrow">ESCOLHA SEUS NÚMEROS</span>
           <h2>{selected.length ? `${selected.length} selecionado(s)` : 'Toque nos números disponíveis'}</h2>
-          <div className="numberGrid">{Array.from({ length: c.quantity }, (_, i) => i + 1).map(number => <button key={number} disabled={reserved.includes(number)} onClick={() => toggle(number)} className={selected.includes(number) ? 'sel' : ''}>{String(number).padStart(3, '0')}</button>)}</div>
+          <div className="numberGrid">{Array.from({ length: c.quantity }, (_, i) => i + 1).map(number => <button key={number} type="button" disabled={reservedSet.has(number)} aria-pressed={selectedSet.has(number)} onClick={() => toggle(number)} className={selectedSet.has(number) ? 'sel' : ''}>{String(number).padStart(3, '0')}</button>)}</div>
           <div className="legend"><span>□ Disponível</span><span>■ Selecionado</span><span>▨ Reservado</span></div>
           <div className="total"><span>Total</span><b>{money(total)}</b></div>
           {recoverError&&<div className="error">{recoverError}</div>}

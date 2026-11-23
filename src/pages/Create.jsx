@@ -7,6 +7,14 @@ import { money } from '../components/CampaignCard'
 import { prepareCampaignCover } from '../utils/coverImage'
 import MercadoPagoConnect from '../components/MercadoPagoConnect'
 
+const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO']
+const MIN_QUANTITY = 10
+const MAX_QUANTITY = 5000
+const todayISO = () => {
+  const now = new Date()
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
+}
+
 const initial = {
   title: '',
   category: 'Solidariedade',
@@ -63,7 +71,7 @@ export default function Create() {
       setPrizes(item.prizes?.length ? item.prizes : [''])
       setForm({
         title: item.title || '', category: item.category || 'Solidariedade',
-        cause: item.cause || '', city: item.city || '', state: item.state || 'MS',
+        cause: item.cause || '', city: item.city || '', state: String(item.state || 'MS').toUpperCase(),
         description: item.description || '', quantity: item.quantity, price: item.price,
         drawType: item.drawType || 'date', drawDate: item.drawDate || '',
         drawRule: item.drawRule || '', pixKey: payment.pixKey || '',
@@ -138,16 +146,47 @@ export default function Create() {
     setForm(current => ({ ...current, coverImage: '', coverImageName: '' }))
   }
 
+  const validateStep = current => {
+    if (current === 1) {
+      if (!form.title.trim() || !form.cause.trim() || !form.description.trim()) return 'Preencha título, causa e descrição.'
+      if (!form.city.trim() || !UFS.includes(form.state)) return 'Informe a cidade e o estado (UF) da campanha.'
+    }
+    if (current === 2) {
+      if (!prizes.some(p => p.trim())) return 'Informe pelo menos um prêmio.'
+      if (!isEdit) {
+        const quantity = Number(form.quantity)
+        const price = Number(form.price)
+        if (!Number.isInteger(quantity) || quantity < MIN_QUANTITY || quantity > MAX_QUANTITY)
+          return `A quantidade de números deve ser um inteiro entre ${MIN_QUANTITY} e ${MAX_QUANTITY}.`
+        if (!Number.isFinite(price) || price < 1) return 'O valor por número deve ser de pelo menos R$ 1,00.'
+      }
+    }
+    if (current === 3) {
+      if (form.drawType === 'date') {
+        if (!isEdit && !form.drawDate) return 'Informe a data prevista do sorteio.'
+        if (!isEdit && form.drawDate < todayISO()) return 'A data do sorteio não pode estar no passado.'
+      }
+      if (!form.drawRule.trim()) return 'Descreva a regra do sorteio.'
+    }
+    if (current === 4 && (!form.pixKey.trim() || !form.pixHolder.trim())) return 'Informe a chave Pix e o titular.'
+    return ''
+  }
+
   const next = () => {
-    setError('')
-    if (step === 1 && (!form.title || !form.cause || !form.description)) return setError('Preencha título, causa e descrição.')
-    if (step === 2 && (!form.quantity || !form.price || !prizes.filter(Boolean).length)) return setError('Informe pelo menos um prêmio, quantidade e valor.')
-    if (step === 3 && !form.drawRule) return setError('Descreva a regra do sorteio.')
+    const message = validateStep(step)
+    setError(message)
+    if (message) return
     setStep(current => Math.min(4, current + 1))
   }
 
   const publish = async () => {
-    if (!form.pixKey || !form.pixHolder) return setError('Informe a chave Pix e o titular.')
+    for (const current of [1, 2, 3, 4]) {
+      const message = validateStep(current)
+      if (message) {
+        setStep(current)
+        return setError(message)
+      }
+    }
     setError('')
     setPublishing(true)
     try {
@@ -155,7 +194,12 @@ export default function Create() {
         ...form,
         quantity: Number(form.quantity),
         price: Number(form.price),
-        prizes: prizes.filter(Boolean),
+        title: form.title.trim(),
+        cause: form.cause.trim(),
+        city: form.city.trim(),
+        pixKey: form.pixKey.trim(),
+        pixHolder: form.pixHolder.trim(),
+        prizes: prizes.map(p => p.trim()).filter(Boolean),
       }
       const item = isEdit
         ? await dataService.updateCampaign(ownedCampaign.id, payload, user)
@@ -201,9 +245,10 @@ export default function Create() {
         {step === 1 && <>
           <h2>01. Campanha e causa</h2>
           <label>Título<input value={form.title} onChange={e => u('title', e.target.value)} placeholder="Ex.: Ajude nosso projeto e concorra..." /></label>
+          <label>Categoria<select value={form.category} onChange={e => u('category', e.target.value)}>{categories.filter(x => x !== 'Todas').map(x => <option key={x}>{x}</option>)}</select></label>
           <div className="row">
-            <label>Categoria<select value={form.category} onChange={e => u('category', e.target.value)}>{categories.filter(x => x !== 'Todas').map(x => <option key={x}>{x}</option>)}</select></label>
-            <label>Cidade<input value={form.city} onChange={e => u('city', e.target.value)} /></label>
+            <label>Cidade<input value={form.city} maxLength={80} onChange={e => u('city', e.target.value)} /></label>
+            <label>Estado (UF)<select value={form.state} onChange={e => u('state', e.target.value)}>{UFS.map(uf => <option key={uf}>{uf}</option>)}</select></label>
           </div>
           <label>Causa/objetivo<input value={form.cause} onChange={e => u('cause', e.target.value)} placeholder="Para que será utilizada a arrecadação?" /></label>
           <label>Descrição<textarea rows="5" value={form.description} onChange={e => u('description', e.target.value)} /></label>
@@ -236,7 +281,7 @@ export default function Create() {
           {prizes.map((prize, i) => <div className="prizeRow" key={i}><input value={prize} onChange={e => setPrizes(items => items.map((x, j) => j === i ? e.target.value : x))} placeholder={`${i + 1}º prêmio`} />{prizes.length > 1 && <button onClick={() => setPrizes(items => items.filter((_, j) => j !== i))}>×</button>}</div>)}
           <button className="smallBtn" onClick={() => setPrizes([...prizes, ''])}>+ Adicionar outro prêmio</button>
           <div className="row">
-            <label>Quantidade de números<input type="number" min="10" max="5000" disabled={isEdit} value={form.quantity} onChange={e => u('quantity', e.target.value)} /></label>
+            <label>Quantidade de números<input type="number" min={MIN_QUANTITY} max={MAX_QUANTITY} step="1" disabled={isEdit} value={form.quantity} onChange={e => u('quantity', e.target.value)} /></label>
             <label>Valor por número<input type="number" min="1" step="0.5" disabled={isEdit} value={form.price} onChange={e => u('price', e.target.value)} /></label>
           </div>
           {isEdit && <div className="editWarning">Quantidade e preço ficam bloqueados após a publicação para proteger os números e participações já registrados.</div>}
@@ -246,7 +291,7 @@ export default function Create() {
         {step === 3 && <>
           <h2>03. Regra do sorteio</h2>
           <div className="choice"><button className={form.drawType === 'date' ? 'active' : ''} onClick={() => u('drawType', 'date')}>📅 Em uma data</button><button className={form.drawType === 'soldout' ? 'active' : ''} onClick={() => u('drawType', 'soldout')}>✓ Ao preencher 100%</button></div>
-          {form.drawType === 'date' && <label>Data prevista<input type="date" value={form.drawDate} onChange={e => u('drawDate', e.target.value)} /></label>}
+          {form.drawType === 'date' && <label>Data prevista<input type="date" min={isEdit ? undefined : todayISO()} value={form.drawDate} onChange={e => u('drawDate', e.target.value)} /></label>}
           <label>Regra<textarea rows="6" value={form.drawRule} onChange={e => u('drawRule', e.target.value)} placeholder="Explique o critério, transmissão, prazo e forma de divulgação do resultado." /></label>
         </>}
 

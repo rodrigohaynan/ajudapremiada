@@ -1,9 +1,28 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { isValidCpf, isValidMobile, onlyDigits } from '../utils/registration'
+import { PUBLIC_SITE_URL } from '../config'
 
 const C=createContext(null)
-const PUBLIC_SITE_URL='https://ajudeeganhe.com.br'
+
+// Mensagens do Supabase Auth chegam em inglês; traduzimos as mais comuns.
+const authMessages=[
+  [/invalid login credentials/i,'E-mail ou senha incorretos.'],
+  [/email not confirmed/i,'Confirme seu e-mail antes de entrar. Verifique também a caixa de spam.'],
+  [/user already registered|already been registered/i,'Já existe uma conta com este e-mail. Entre ou recupere sua senha.'],
+  [/password should be at least/i,'A senha deve ter pelo menos 8 caracteres.'],
+  [/new password should be different/i,'A nova senha precisa ser diferente da senha atual.'],
+  [/weak password|password is known to be weak|pwned/i,'Esta senha é fraca ou já apareceu em vazamentos. Escolha outra.'],
+  [/rate limit|too many requests|security purposes/i,'Muitas tentativas em pouco tempo. Aguarde alguns minutos e tente novamente.'],
+  [/unable to validate email|invalid email|email address .* is invalid/i,'Informe um endereço de e-mail válido.'],
+  [/auth session missing|session.*expired|jwt expired/i,'Sua sessão expirou. Solicite um novo link ou entre novamente.'],
+  [/failed to fetch|network/i,'Falha de conexão. Verifique sua internet e tente novamente.']
+]
+const authError=error=>{
+  const message=String(error?.message||'')
+  const match=authMessages.find(([pattern])=>pattern.test(message))
+  return match?new Error(match[1]):error
+}
 
 const shapeUser=async authUser=>{
   if(!authUser) return null
@@ -22,7 +41,8 @@ export function AuthProvider({children}){
      if(active)setUser(await shapeUser(data.session?.user))
      if(active)setLoading(false)
    })
-   const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,session)=>{
+   const {data:{subscription}}=supabase.auth.onAuthStateChange((event,session)=>{
+     if(event==='TOKEN_REFRESHED')return
      setTimeout(async()=>{
        if(active)setUser(await shapeUser(session?.user))
        if(active)setLoading(false)
@@ -34,7 +54,7 @@ export function AuthProvider({children}){
  const login=async({email,password})=>{
    if(!supabase) throw new Error('Supabase não está configurado.')
    const {data,error}=await supabase.auth.signInWithPassword({email,password})
-   if(error) throw error
+   if(error) throw authError(error)
    const u=await shapeUser(data.user)
    setUser(u)
    return u
@@ -62,7 +82,7 @@ export function AuthProvider({children}){
      if(/database error/i.test(error.message||'')) {
        throw new Error('Não foi possível concluir o cadastro. Verifique seus dados ou utilize outro e-mail.')
      }
-     throw error
+     throw authError(error)
    }
    const u=data.session?await shapeUser(data.user):null
    if(u)setUser(u)
@@ -75,13 +95,13 @@ export function AuthProvider({children}){
    if(!normalized)throw new Error('Informe seu e-mail para recuperar a senha.')
    const redirectTo=PUBLIC_SITE_URL+'/redefinir-senha'
    const {error}=await supabase.auth.resetPasswordForEmail(normalized,{redirectTo})
-   if(error)throw error
+   if(error)throw authError(error)
  }
 
  const changePassword=async password=>{
    if(!supabase)throw new Error('Supabase não está configurado.')
    const {error}=await supabase.auth.updateUser({password})
-   if(error)throw error
+   if(error)throw authError(error)
    await supabase.auth.signOut()
    setUser(null)
  }
