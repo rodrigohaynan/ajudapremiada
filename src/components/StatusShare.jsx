@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import qrFactory from '../vendor/qrcode.mjs'
 import { dataService } from '../services/dataService'
 import { money } from './CampaignCard'
+import { campaignUrl, PUBLIC_SITE_HOST } from '../config'
 
 const W=1080,H=1920
 const brand='#0f766e'
@@ -92,7 +93,7 @@ function drawGrid(ctx,statuses,quantity){
 async function makeImage(campaign,statusRows){
   const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H
   const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Canvas indisponível.')
-  const url=window.location.origin+'/campanha/'+encodeURIComponent(campaign.slug)
+  const url=campaignUrl(campaign.slug)
   const now=Date.now()
   const lookup=new Map(statusRows.map(x=>[Number(x.number),x]))
   const statuses=Array.from({length:campaign.quantity},(_,i)=>{
@@ -120,7 +121,7 @@ async function makeImage(campaign,statusRows){
   drawQr(ctx,url,73,1650,210)
   drawText(ctx,'ESCANEIE PARA PARTICIPAR',305,1706,700,'800 32px Arial',brand)
   drawText(ctx,'ou use o link da campanha',305,1750,705,'500 28px Arial','#425e58')
-  drawText(ctx,'ajude-e-ganhe.netlify.app/campanha/',305,1790,680,'700 24px Arial','#23423b')
+  drawText(ctx,PUBLIC_SITE_HOST+'/campanha/',305,1790,680,'700 24px Arial','#23423b')
   drawText(ctx,campaign.slug,305,1830,680,'700 24px Arial','#23423b')
   drawText(ctx,'Confira a disponibilidade atual antes de reservar.',70,1900,930,'600 23px Arial','#4c665f')
   drawText(ctx,'Imagem atualizada em '+new Date(now).toLocaleString('pt-BR'),70,1920-7,900,'400 18px Arial','#758c84')

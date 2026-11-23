@@ -1,11 +1,23 @@
-const escapeMeta = (value) => String(value || "")
+import type { Config, Context } from "@netlify/edge-functions";
+
+const escapeMeta = (value: unknown) => String(value || "")
   .replace(/&/g, "&amp;").replace(/"/g, "&quot;")
   .replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-export default async (request, context) => {
+const SITE_URL = "https://ajudeeganhe.com.br";
+
+const readSlug = (pathname: string) => {
+  try {
+    return decodeURIComponent(pathname.slice("/campanha/".length)).replace(/\/$/, "");
+  } catch (_) {
+    return "";
+  }
+};
+
+export default async (request: Request, context: Context) => {
   const url = new URL(request.url);
   if (request.method !== "GET" || !url.pathname.startsWith("/campanha/")) return;
-  const slug = decodeURIComponent(url.pathname.slice("/campanha/".length)).replace(/\/$/, "");
+  const slug = readSlug(url.pathname);
   if (!slug || slug.includes("/") || slug.length > 180) return;
   const backend = Netlify.env.get("VITE_SUPABASE_URL");
   const apikey = Netlify.env.get("VITE_SUPABASE_PUBLISHABLE_KEY");
@@ -31,7 +43,7 @@ export default async (request, context) => {
 
     const title = escapeMeta(campaign.title + " | Ajude e Ganhe");
     const description = escapeMeta((campaign.cause || campaign.description || "Conheça esta campanha no Ajude e Ganhe").slice(0, 210));
-    const canonical = "https://ajude-e-ganhe.netlify.app/campanha/" + encodeURIComponent(campaign.slug);
+    const canonical = SITE_URL + "/campanha/" + encodeURIComponent(campaign.slug);
     const image = (campaign.cover_url || "").startsWith(backend + "/storage/v1/object/public/campaign-covers/")
       ? escapeMeta(campaign.cover_url) : "";
 
@@ -41,6 +53,7 @@ export default async (request, context) => {
       '<meta property="og:title" content="' + title + '">',
       '<meta property="og:description" content="' + description + '">',
       '<meta property="og:url" content="' + escapeMeta(canonical) + '">',
+      '<link rel="canonical" href="' + escapeMeta(canonical) + '">',
       '<meta name="twitter:card" content="summary_large_image">',
       '<meta name="twitter:title" content="' + title + '">',
       '<meta name="twitter:description" content="' + description + '">',
@@ -62,4 +75,4 @@ export default async (request, context) => {
   }
 };
 
-export const config = { path: "/campanha/*", onError: "bypass" };
+export const config: Config = { path: "/campanha/*", onError: "bypass" };

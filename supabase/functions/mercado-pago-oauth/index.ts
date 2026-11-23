@@ -3,17 +3,29 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const PROJECT_ORIGIN = "https://ajude-e-ganhe.netlify.app";
+// Domínio principal: o retorno do OAuth leva o organizador para o site oficial.
+const PROJECT_ORIGIN = "https://ajudeeganhe.com.br";
+const allowedOrigins = new Set([
+  PROJECT_ORIGIN,
+  "https://www.ajudeeganhe.com.br",
+  "https://ajude-e-ganhe.netlify.app"
+]);
 const MP_CLIENT_ID = Deno.env.get("MP_CLIENT_ID") || "";
 const MP_CLIENT_SECRET = Deno.env.get("MP_CLIENT_SECRET") || "";
 const CALLBACK_URL = Deno.env.get("MP_REDIRECT_URI") ||
   SUPABASE_URL + "/functions/v1/mercado-pago-oauth";
 
-function json(data: unknown, status = 200) {
+function corsFor(req: Request): Record<string, string> {
+  const origin = req.headers.get("origin");
+  return origin && allowedOrigins.has(origin)
+    ? { "access-control-allow-origin": origin, "vary": "Origin" }
+    : {};
+}
+function json(req: Request, data: unknown, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: {
     "content-type": "application/json; charset=utf-8",
-    "access-control-allow-origin": PROJECT_ORIGIN,
     "cache-control": "no-store",
+    ...corsFor(req),
   } });
 }
 function redirect(result: string) {
@@ -31,14 +43,13 @@ async function rpc(name: string, args: Record<string, unknown>) {
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: {
-    "access-control-allow-origin": PROJECT_ORIGIN,
+    ...corsFor(req),
     "access-control-allow-headers": "authorization, apikey, content-type, x-client-info",
     "access-control-allow-methods": "POST, GET, OPTIONS",
   } });
-  if (!SUPABASE_URL || !SERVICE_KEY) return json({error:"Configuração Supabase indisponível."},503);
+  if (!SUPABASE_URL || !SERVICE_KEY) return json(req, {error:"Configuração Supabase indisponível."},503);
   const url = new URL(req.url);
   if (req.method === "GET") {
-    if (req.method !== "GET") return redirect("error");
     if (url.searchParams.has("error")) return redirect("cancelled");
     const code = url.searchParams.get("code");
     const state = url.searchParams.get("state");
@@ -65,22 +76,23 @@ Deno.serve(async (req: Request) => {
       return redirect("connected");
     } catch (_) { return redirect("error"); }
   }
-  if (req.method !== "POST") return json({error:"Método inválido."},405);
-  if (req.headers.get("origin") && req.headers.get("origin") !== PROJECT_ORIGIN) return json({error:"Origem inválida."},403);
-  if (!MP_CLIENT_ID || !MP_CLIENT_SECRET) return json({
+  if (req.method !== "POST") return json(req, {error:"Método inválido."},405);
+  const origin = req.headers.get("origin");
+  if (origin && !allowedOrigins.has(origin)) return json(req, {error:"Origem inválida."},403);
+  if (!MP_CLIENT_ID || !MP_CLIENT_SECRET) return json(req, {
     error:"A conexão Mercado Pago ainda depende das credenciais do aplicativo e da liberação comercial."
   },503);
   const bearer = req.headers.get("authorization") || "";
-  if (!/^Bearer /i.test(bearer)) return json({error:"Entre na sua conta para continuar."},401);
+  if (!/^Bearer /i.test(bearer)) return json(req, {error:"Entre na sua conta para continuar."},401);
   let body: {action?:string};
-  try { body = await req.json(); } catch { return json({error:"Solicitação inválida."},400); }
-  if (body.action !== "start") return json({error:"Operação não suportada."},400);
+  try { body = await req.json(); } catch { return json(req, {error:"Solicitação inválida."},400); }
+  if (body.action !== "start") return json(req, {error:"Operação não suportada."},400);
   const me = await fetch(SUPABASE_URL + "/auth/v1/user",{
     headers:{"apikey": SERVICE_KEY,"authorization":bearer}
   });
-  if (!me.ok) return json({error:"Sessão inválida. Entre novamente."},401);
+  if (!me.ok) return json(req, {error:"Sessão inválida. Entre novamente."},401);
   const authenticated = await me.json();
-  if (!authenticated.id) return json({error:"Usuário inválido."},401);
+  if (!authenticated.id) return json(req, {error:"Usuário inválido."},401);
   try {
     const state = await rpc("mp_begin_oauth",{p_user_id:authenticated.id});
     const authorize = new URL("https://auth.mercadopago.com.br/authorization");
@@ -89,6 +101,6 @@ Deno.serve(async (req: Request) => {
     authorize.searchParams.set("platform_id","mp");
     authorize.searchParams.set("state",String(state));
     authorize.searchParams.set("redirect_uri",CALLBACK_URL);
-    return json({url:authorize.toString()});
-  } catch (_) { return json({error:"Não foi possível iniciar a conexão."},500); }
+    return json(req, {url:authorize.toString()});
+  } catch (_) { return json(req, {error:"Não foi possível iniciar a conexão."},500); }
 });

@@ -159,6 +159,7 @@ const supabaseService={
  },
  async createCampaign(payload,user){
   let uploadedPath=null
+  let createdId=null
   try{
     const coverUrl=await uploadCover(payload.coverImage,user.id)
     if(coverUrl){
@@ -174,6 +175,7 @@ const supabaseService={
       accent:payload.accent||'#0f766e',cover_url:coverUrl,status:'active'
     }).select().single()
     if(error) throw error
+    createdId=campaign.id
 
     const prizes=(payload.prizes||[]).filter(Boolean).map((title,index)=>({campaign_id:campaign.id,position:index+1,title}))
     if(prizes.length){
@@ -185,9 +187,14 @@ const supabaseService={
     })
     if(pay.error) throw pay.error
 
+    createdId=null;uploadedPath=null
     return this.getCampaign(campaign.slug)
   }catch(error){
-    if(uploadedPath) await supabase.storage.from('campaign-covers').remove([uploadedPath])
+    // Evita campanha publicada pela metade (sem prêmio ou sem Pix).
+    try{
+      if(createdId) await supabase.rpc('manage_campaign_lifecycle',{p_campaign_id:createdId,p_action:'delete'})
+      if(uploadedPath) await supabase.storage.from('campaign-covers').remove([uploadedPath])
+    }catch{}
     throw error
   }
  },
@@ -200,6 +207,8 @@ const supabaseService={
  async updateCampaign(id,payload,user){
   const existing=await this.getCampaign(id)
   if(!existing||existing.ownerId!==user.id)throw new Error('Somente o organizador pode editar esta campanha.')
+  const newPrizes=(payload.prizes||[]).map(p=>String(p).trim()).filter(Boolean)
+  if(!newPrizes.length)throw new Error('Informe ao menos um prêmio.')
   let coverUrl=payload.coverImage||null
   if(coverUrl?.startsWith('data:image/')) coverUrl=await uploadCover(coverUrl,user.id)
   const {data,error}=await supabase.from('campaigns').update({
@@ -214,8 +223,6 @@ const supabaseService={
     pix_key:payload.pixKey,pix_holder:payload.pixHolder,updated_at:new Date().toISOString()
   }).eq('campaign_id',id)
   if(updatedPay.error)throw updatedPay.error
-  const newPrizes=(payload.prizes||[]).map(p=>String(p).trim()).filter(Boolean)
-  if(!newPrizes.length)throw new Error('Informe ao menos um prêmio.')
   const removed=await supabase.from('campaign_prizes').delete().eq('campaign_id',id)
   if(removed.error)throw removed.error
   const added=await supabase.from('campaign_prizes').insert(newPrizes.map((title,index)=>({
@@ -292,8 +299,9 @@ const supabaseService={
     body:{action:'status',id,token:accessToken}
   })
   if(error){
-    try{const m=await error.context.json();throw Error(m.error||'Não foi possível consultar a reserva.')}
-    catch(e){throw Error(e.message||'Não foi possível consultar a reserva.')}
+    let message='Não foi possível consultar a reserva.'
+    try{const m=await error.context.json();message=m?.error||message}catch{}
+    throw new Error(message)
   }
   if(data?.error)throw Error(data.error)
   return {...data,accessToken}
@@ -321,7 +329,12 @@ const supabaseService={
   const {data,error}=await supabase.functions.invoke('manual-payment-proof',{
     body:{action:'review',id,decision}
   })
-  if(error||!data?.ok)throw Error(data?.error||'Não foi possível confirmar o pagamento.')
+  if(error){
+    let message='Não foi possível concluir a análise do comprovante.'
+    try{const m=await error.context.json();message=m?.error||message}catch{}
+    throw new Error(message)
+  }
+  if(!data?.ok)throw Error(data?.error||'Não foi possível concluir a análise do comprovante.')
   return data
  },
  async getParticipationContactStatus(){

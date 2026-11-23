@@ -33,7 +33,7 @@ export default function Dashboard(){
    ])
      .then(([p,o,c])=>{setParts(p);setOwned(o);setContact(c);setError('')})
      .catch(err=>setError(err.message||'Não foi possível carregar sua conta.'))
- },[user])
+ },[user?.id])
  const saveContactPhone=async event=>{
    event.preventDefault()
    setContactError('')

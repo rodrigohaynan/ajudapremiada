@@ -6,3 +6,19 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+# Cabeçalhos de segurança básicos para todas as páginas.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=()"
+    Strict-Transport-Security = "max-age=31536000"
+
+# Arquivos gerados pelo Vite têm hash no nome e podem ficar em cache por 1 ano.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
